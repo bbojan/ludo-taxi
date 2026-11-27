@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# temporary files from server.py / tools/renumber.py
+*.tmp
+*.renumber-tmp
+
+# local editor / Claude Code settings
+.claude/
