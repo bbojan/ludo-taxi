@@ -37,6 +37,12 @@
   let selected = null;
   let anim = null;
   let nightOn = false;          // „Ноќна смена“: dark street map, glowing sheets, dark interface (see applyNight)
+  // Analytics: custom GA4 events. gtag only exists on the live site (index.html), so this is a no-op
+  // locally. Set window.LUDO_DEBUG_EVENTS = true in the console to log events while testing.
+  function track(name, params = {}) {
+    if (window.LUDO_DEBUG_EVENTS) console.log('[event]', name, params);
+    if (typeof window.gtag === 'function') window.gtag('event', name, params);
+  }
   // Hooks for the playful extras in fun.js (guessing game, taximeter, secret code)
   const fun = { hideSheets: false, onTap: null, afterRender: [], actions: {} };
 
@@ -763,9 +769,11 @@
   }
   document.querySelectorAll('input[name="night"]').forEach(r => r.addEventListener('change', () => {
     prefs.night = r.value; savePrefs(); applyNight();
+    track('night_shift', { mode: r.value, via: 'about' });
   }));
   function toggleNight() {
     prefs.night = nightOn ? 'off' : 'on'; savePrefs(); applyNight();
+    track('night_shift', { mode: prefs.night, via: 'key' });
     toast(nightOn ? '🌙 Ноќна смена' : '☀️ Дневна смена');
   }
   applyNight();
@@ -776,6 +784,7 @@
   // Selected sheet card
   function select(s) {
     if (s !== selected) { tempSelectedAlpha = 1; viewBeforeFocus = null; }   // per-selection state never carries over
+    if (s && s !== selected && !fun.hideSheets) track('select_sheet', { sheet: s.name });
     selected = s;
     syncCard();
     syncFocusBtn();
@@ -812,7 +821,7 @@
   $('cardFocus').onclick = () => {
     if (!selected) return;
     if (viewBeforeFocus) { flyTo(viewBeforeFocus); viewBeforeFocus = null; }
-    else { viewBeforeFocus = { cx: view.cx, cy: view.cy, scale: view.scale, rot: view.rot }; focusSheet(selected); }
+    else { viewBeforeFocus = { cx: view.cx, cy: view.cy, scale: view.scale, rot: view.rot }; focusSheet(selected); track('show_on_map', { sheet: selected.name }); }
     syncFocusBtn();
   };
   // Keyboard: select the next / previous sheet by number, wrapping round. While a sheet is shown
@@ -838,7 +847,9 @@
 
   // Download originals (works also when a browser ignores the download attribute)
   $('cardDownload').addEventListener('click', e => { if (selected) downloadOriginal(e, selected); });
+  document.querySelector('.download-all').addEventListener('click', () => track('download_all'));
   async function downloadOriginal(e, s) {
+    track('download_sheet', { sheet: s.name });
     if (location.protocol === 'file:') return;
     e.preventDefault();
     const blob = await (await fetch(`sheets/${s.id}.jpg`)).blob();
@@ -912,6 +923,7 @@
   const fitScale = () => Math.min((viewer.clientWidth - 24) / vt.w, (viewer.clientHeight - 80) / vt.h);
 
   function openViewer(s) {
+    if (!viewerSheet) track('fullscreen', { sheet: s.name });
     viewerSheet = s;
     $('viewerNum').textContent = +s.id;
     $('viewerTitle').textContent = s.name;
@@ -1059,6 +1071,7 @@
   }
   $('cardShare').onclick = async () => {
     if (!selected) return;
+    track('share_sheet', { sheet: selected.name });
     const url = linkFor(selected), title = `${selected.name} · Лудо Такси`;
     if (navigator.share && matchMedia('(pointer: coarse)').matches) {
       try { await navigator.share({ title, url }); } catch { /* cancelled */ }
@@ -1071,7 +1084,7 @@
   // ---------- About dialog: opened from the logo badge ----------
   const about = $('aboutDialog');
   function openAbout(withHelp = false) {
-    if (!about.open) about.showModal();
+    if (!about.open) { about.showModal(); track('open_about', { controls: withHelp === true }); }
     if (withHelp === true) {                             // "?" key: open Контроли and scroll to it
       const help = about.querySelector('.help');
       help.open = true;
@@ -1102,7 +1115,7 @@
     worldToScreen, screenToWorld, sheetGeom, metersPerUnit, yToLat, xToLon, $,
     showOnMap(s) { select(s); $('cardFocus').click(); },
     get night() { return nightOn; }, sunTimes,
-    get anim() { return anim; },
+    get anim() { return anim; }, track,
   };
 
   resize();

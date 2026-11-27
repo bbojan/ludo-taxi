@@ -6,6 +6,25 @@
 <title>Лудо Такси · мапи на Скопје</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
+<!-- Google Analytics (GA4), property "Лудо Такси", stream https://bbojan.github.io/ludo-taxi: analytics
+     cookies on, advertising off, no banner (same setup as 091 Скопје and Старо Скопје).
+     Only on the live site, not on localhost. Custom events: see track() in app.js and the README. -->
+<script>
+  if (location.hostname === 'bbojan.github.io') {
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      ad_storage: 'denied', analytics_storage: 'granted',
+      ad_user_data: 'denied', ad_personalization: 'denied',
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-G4V01MV6HD');
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-G4V01MV6HD';
+    document.head.appendChild(s);
+  }
+</script>
 </head>
 <body>
 <canvas id="map"></canvas>
@@ -15,6 +34,7 @@
   <h1><img class="logo" src="logo.svg" alt="Лудо Такси" width="200" height="115"></h1>
   <p>мапи на Скопје нацртани на рака<br>прилично одамна</p>
 </header>
+<div class="fun-row">
 <div class="fun-bar">
   <button id="rideBtn" class="roof" title="Возење до случајна населба (K)">Каде, шефе?</button>
   <button id="gameBtn" class="fun-btn" title="Игра: погоди ја населбата (P)">🎯 Погоди</button>
@@ -22,6 +42,7 @@
 <button id="meter" class="meter" title="Таксиметар: колку патувала картата. Клик за сметка (M)">
   <span class="km">0.0 km</span><span class="fare">40 ден</span>
 </button>
+</div>
 </div>
 
 <div class="controls" role="toolbar">

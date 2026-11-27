@@ -51,7 +51,8 @@ canvas#map.dragging { cursor: grabbing; }
 .controls button.on { background: var(--ink); color: var(--paper); }
 
 .panel { position: fixed; right: 70px; top: max(12px, env(safe-area-inset-top)); width: min(300px, calc(100vw - 90px));
-  max-height: calc(100% - 90px); overflow: auto; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px; }
+  max-height: calc(100% - 90px); overflow: auto; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px;
+  z-index: 3; }   /* above the logo column (z-index 1), which it overlaps on phones */
 .panel-head, .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .panel-head strong { flex: 1; }
 /* the panel title and × stay at the top while the panel scrolls */
@@ -239,7 +240,8 @@ body.card-open .attribution { display: none; }
 .meter.night .fare::after { content: ' ☾'; }
 .meter:hover { background: #000; }
 .fun-bar button:focus-visible, .meter:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-body.game-on .fun-bar, body.game-on .meter, body.game-on #sheetCard { display: none; }
+body.game-on .fun-row, body.game-on #sheetCard { display: none; }
+.fun-row { display: flex; flex-direction: column; gap: 8px; }
 
 .game { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 5;
   width: min(300px, calc(100vw - 28px)); background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px; }
@@ -271,10 +273,16 @@ body.game-on .fun-bar, body.game-on .meter, body.game-on #sheetCard { display: n
 .receipt .r-thanks { margin: 8px 0 12px; text-align: center; font-size: 11px; }
 .receipt .row.split { display: flex; gap: 8px; font-family: system-ui, -apple-system, sans-serif; }
 
+/* phones: only the logo stays top-left; the fun buttons and the meter become one row at the bottom
+   centre, lifted above the sheet card when it is open (--card-h is set by fun.js) */
 @media (max-width: 640px) {
-  .fun-bar { flex-direction: column; }
-  .fun-bar button { font-size: 12px; padding: 6px; }
-  .meter { font-size: 13px; padding: 5px 8px; }
+  .fun-row { position: fixed; left: 50%; transform: translateX(-50%); flex-direction: row; align-items: stretch; gap: 6px;
+    width: min(380px, calc(100vw - 20px)); bottom: calc(max(22px, env(safe-area-inset-bottom) + 8px)); transition: bottom .2s; }
+  body.card-open .fun-row { bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--card-h, 110px) + 8px); }
+  .fun-bar { flex: 2 1 0; min-width: 0; }
+  .fun-bar button { font-size: 12px; padding: 8px 4px; }
+  .meter { flex: 1.3 1 0; min-width: 0; flex-direction: column; align-items: flex-end; justify-content: center; gap: 1px;
+    font-size: 12px; padding: 4px 8px; }
 }
 
 /* About dialog: „Ноќна смена“ segmented choice */

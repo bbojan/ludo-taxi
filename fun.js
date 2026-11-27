@@ -42,6 +42,7 @@
     if (about.open) about.close();
     honk();
     T.spin();
+    T.track('secret_code');
     T.toast('🚕 Бип-бип! Лудо такси на линија!');
   }
   const CODE = ['KeyT', 'KeyA', 'KeyX', 'KeyI'];
@@ -74,6 +75,7 @@
     T.closePanels();
     T.showOnMap(s);
     T.toast('🚕 ' + pickOne(RIDE_LINES)(s.name));
+    T.track('ride', { sheet: s.name });
   }
   fun.actions.ride = ride;
 
@@ -123,6 +125,7 @@
       mk('p', 'r-thanks', 'Ви благодариме што возевте со Лудо Такси!'),
     );
     receiptDlg.showModal();
+    T.track('taximeter_receipt', { km: Math.round(meter.km * 10) / 10, fare: fare() });
   }
   fun.actions.receipt = receipt;
   meterEl.addEventListener('click', receipt);
@@ -203,6 +206,7 @@
     T.$('aboutDialog').open && T.$('aboutDialog').close();
     panel.classList.remove('hidden');
     document.body.classList.add('game-on');
+    T.track('game_start', { challenge: game.challenge != null, timer: game.timer });
     nextRound();
   }
   function nextRound() {
@@ -275,8 +279,8 @@
     game.total += rd.pts;
     game.pending = null;
     game.state = 'result';
+    T.select(rd.sheet);                                  // while the sheets are still hidden: no select_sheet event
     fun.hideSheets = false;
-    T.select(rd.sheet);
     const name = rd.sheet.name;
     $('gameText').textContent = guess
       ? `${name}: промаши за ${fmtDist(rd.m)} → ${rd.pts} поени.` + (rd.m < 150 ? ' Право на адреса! 🎯' : rd.m < 600 ? ' Блиску!' : '')
@@ -295,6 +299,8 @@
     if (game.total > st.best) { st.best = game.total; st.bestDate = Date.now(); }
     localStorage.setItem(STATS_KEY, JSON.stringify(st));
     showStats();
+    T.track('game_end', { score: game.total, challenge: game.challenge != null, timer: game.timer,
+      ...(game.challenge != null ? { beat_challenge: game.total > game.challenge } : {}) });
     const max = ROUNDS * 1000, t = game.total;
     const verdict = t >= max * 0.8 ? 'Вистински таксист! 🚕' : t >= max * 0.5 ? 'Добро ги знаеш маалата.'
       : t >= max * 0.2 ? 'Уште малку возење и ќе ги знаеш.' : 'Следниот пат земи такси 😄';
@@ -344,6 +350,7 @@
   }
   $('gameShare').onclick = async () => {
     if (!game) return;
+    T.track('challenge_share', { score: game.total, timer: game.timer });
     const url = challengeLink(), title = `Лудо Такси: погоди ја населбата. Мој резултат: ${game.total}. Можеш подобро?`;
     if (navigator.share && matchMedia('(pointer: coarse)').matches) {
       try { await navigator.share({ title, text: title, url }); } catch { /* cancelled */ }
@@ -512,6 +519,10 @@
     }
     ctx.restore();
   }
+
+  // phones: the fun row sits above the sheet card, so it needs the card's height
+  const card = $('sheetCard');
+  new ResizeObserver(() => { if (card.offsetHeight) document.body.style.setProperty('--card-h', card.offsetHeight + 'px'); }).observe(card);
 
   $('rideBtn').onclick = ride;
   $('gameBtn').onclick = () => startGame();

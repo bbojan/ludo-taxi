@@ -147,7 +147,9 @@ solid sheets get a warm glow instead of a shadow, and the interface switches its
 
 ### Extras
 
-Under the logo, a little left column has three playful extras (all in `fun.js`):
+Under the logo, a little left column has three playful extras (all in `fun.js`). On phones (narrower than
+640 px) they become one row at the bottom centre instead, which moves up above the sheet card while it is
+open:
 
 - **Каде, шефе?** ("Where to, boss?", the yellow taxi-roof button, `K`): a ride to a random neighbourhood.
   It works like **Show on map**, so **Back** / `Esc` returns, and a taxi-driver line pops up
@@ -266,6 +268,41 @@ under each slider shows where the default is.
 - **Show sheet numbers**: off by default. Turns on the sheet numbers everywhere: in the labels on the map
   (`11 · Козле`), in the list, on the sheet card and in the full-screen viewer.
 - **Edit layout**: see below.
+
+## Analytics
+
+Google Analytics 4: property **Лудо Такси** (account bojanb), web stream **Лудо Такси (GitHub Pages)**
+for `https://bbojan.github.io/ludo-taxi`, measurement ID `G-G4V01MV6HD`. Same setup as 091 Скопје and
+Старо Скопје: analytics cookies on, advertising off (consent mode defaults), no banner. The tag in
+`index.html` only loads on `bbojan.github.io`, so local testing never counts.
+
+In the stream's enhanced measurement, **page changes based on browser history events** is switched off:
+the address changes (`#centar`) on every sheet selection, which would otherwise count as page views.
+Page loads, scrolls, outbound clicks, site search, form interactions, video and file downloads stay on.
+
+Custom events (sent by `track()` in `app.js`, also used by `fun.js`):
+
+| Event | When | Parameters |
+|---|---|---|
+| `select_sheet` | a sheet is selected (not during the guessing game) | `sheet` |
+| `show_on_map` | Show on map (also double-click, Enter, rides) | `sheet` |
+| `fullscreen` | the full-screen viewer opens | `sheet` |
+| `download_sheet` | one original is downloaded | `sheet` |
+| `download_all` | the ZIP of all 26 | — |
+| `share_sheet` | the 🔗 link on the card | `sheet` |
+| `ride` | Каде, шефе? | `sheet` |
+| `night_shift` | night shift changed | `mode` (`auto` / `on` / `off`), `via` (`about` / `key`) |
+| `taximeter_receipt` | the receipt opens | `km`, `fare` |
+| `secret_code` | T A X I or 5 taps on the About logo | — |
+| `open_about` | the About dialog opens | `controls` (true when opened with `?`) |
+| `game_start` | a guessing game starts | `challenge`, `timer` |
+| `game_end` | a guessing game finishes | `score`, `challenge`, `timer`, `beat_challenge` (challenges only) |
+| `challenge_share` | Предизвикај пријател | `score`, `timer` |
+
+To see `sheet`, `score` and the others as columns in reports, register them once in GA4 under
+**Admin → Custom definitions → Create custom dimension** (event-scoped; `score`, `km` and `fare` as
+custom metrics). While testing locally, run `LUDO_DEBUG_EVENTS = true` in the browser console to log
+every event instead.
 
 ## Aligning the sheets
 
