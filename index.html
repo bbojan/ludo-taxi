@@ -127,6 +127,23 @@
   </div>
   <p class="credits">Мапите ги нацртал на рака скопски таксист<br>(потпис „МБ“).<br>
     Улична карта © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> соработници.</p>
+  <section class="scores" aria-labelledby="scoresTitle">
+    <h3 id="scoresTitle">Игра „Погоди“</h3>
+    <p id="scoresText">Уште немаш одиграно.</p>
+    <div class="row split">
+      <button id="scoresPlay" class="text primary">Играј</button>
+      <button id="scoresClear" class="text">Избриши</button>
+    </div>
+  </section>
+  <section class="night-set" aria-labelledby="nightTitle">
+    <h3 id="nightTitle">Ноќна смена</h3>
+    <div class="seg" role="radiogroup" aria-labelledby="nightTitle">
+      <label><input type="radio" name="night" value="auto"><span>Автоматски</span></label>
+      <label><input type="radio" name="night" value="on"><span>🌙 Вклучена</span></label>
+      <label><input type="radio" name="night" value="off"><span>☀️ Исклучена</span></label>
+    </div>
+    <p class="hint">Автоматски: од зајдисонце до изгрејсонце во Скопје. Копче <kbd>Z</kbd>.</p>
+  </section>
   <nav class="more" aria-labelledby="moreTitle">
     <h3 id="moreTitle">Други проекти</h3>
     <a href="https://bbojan.github.io/091-skopje/" target="_blank" rel="noopener">
@@ -136,14 +153,6 @@
       <img src="projects/staro-skopje.jpg" alt="" width="160" height="100" loading="lazy">
       <span>Старо Скопје</span></a>
   </nav>
-  <section class="scores" aria-labelledby="scoresTitle">
-    <h3 id="scoresTitle">Игра „Погоди“</h3>
-    <p id="scoresText">Уште немаш одиграно.</p>
-    <div class="row split">
-      <button id="scoresPlay" class="text primary">Играј</button>
-      <button id="scoresClear" class="text">Избриши</button>
-    </div>
-  </section>
   <details class="help">
     <summary>Контроли</summary>
     <h4>Тастатура</h4>
@@ -164,6 +173,7 @@
       <dt>Избери од листата</dt><dd><kbd>Tab</kbd>, па <kbd>Enter</kbd></dd>
       <dt>„Каде, шефе?“ (случајно возење)</dt><dd><kbd>K</kbd></dd>
       <dt>Сметка од таксиметарот</dt><dd><kbd>M</kbd></dd>
+      <dt>Ноќна смена</dt><dd><kbd>Z</kbd></dd>
       <dt>Игра „Погоди“ / крај на играта</dt><dd><kbd>P</kbd> / <kbd>Esc</kbd></dd>
       <dt>Назад, па затвори</dt><dd><kbd>Esc</kbd></dd>
       <dt>Затвори го овој прозорец</dt><dd><kbd>Esc</kbd></dd>

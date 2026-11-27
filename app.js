@@ -27,7 +27,7 @@
   const DEFAULT_BASE_STRENGTH = 0.45, DEFAULT_SHEET_ALPHA = 0.4;
   const EDIT_OTHERS_ALPHA = 0.05;
   let tempSelectedAlpha = 1;    // edit mode only, for checking alignment; back to 100% on every selection change
-  const prefs = Object.assign({ base: true, baseStrength: DEFAULT_BASE_STRENGTH, sheetAlpha: DEFAULT_SHEET_ALPHA, labels: true, numbers: false }, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'));
+  const prefs = Object.assign({ base: true, baseStrength: DEFAULT_BASE_STRENGTH, sheetAlpha: DEFAULT_SHEET_ALPHA, labels: true, numbers: false, night: 'auto' }, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'));
   let editMode = false;
   // Creator tools (Edit layout, restore/export, size/rotation/opacity sliders) only with ?edit in the URL.
   // Editing is switched OFF for now (the owner will say when to bring it back).
@@ -36,6 +36,7 @@
   const CREATOR = EDITING_ENABLED && [...new URLSearchParams(location.search).keys()].some(k => k.toLowerCase() === 'edit');   // ?edit, ?Edit, …
   let selected = null;
   let anim = null;
+  let nightOn = false;          // „Ноќна смена“: dark street map, glowing sheets, dark interface (see applyNight)
   // Hooks for the playful extras in fun.js (guessing game, taximeter, secret code)
   const fun = { hideSheets: false, onTap: null, afterRender: [], actions: {} };
 
@@ -202,6 +203,18 @@
       ctx.restore();
     }
 
+    if (nightOn) {                                        // night shift: invert the street map, then tint it blue-grey
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = 'difference';
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, vw, vh);
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = '#8d9bc2';
+      ctx.fillRect(0, 0, vw, vh);
+      ctx.restore();
+    }
+
     const order = [...sheets].sort((a, c) => a.z - c.z);
     if (selected) { order.splice(order.indexOf(selected), 1); order.push(selected); }   // selected always on top
     ctx.imageSmoothingEnabled = true;
@@ -218,15 +231,16 @@
       }
       // The selected sheet is solid; the others follow "Sheet opacity".
       // Edit mode with a selection: the others nearly vanish so they don't get in the way.
-      const alpha = s === selected ? (editMode ? tempSelectedAlpha : 1) : (editMode && selected) ? EDIT_OTHERS_ALPHA : prefs.sheetAlpha;
+      let alpha = s === selected ? (editMode ? tempSelectedAlpha : 1) : (editMode && selected) ? EDIT_OTHERS_ALPHA : prefs.sheetAlpha;
+      if (nightOn && alpha > EDIT_OTHERS_ALPHA && alpha < 1) alpha = Math.min(1, alpha * 1.5);   // a bit brighter on the dark map
       const seeThrough = alpha < 0.999;
       ctx.save();
       ctx.translate(g.x, g.y);
       ctx.rotate(g.r);
       ctx.globalAlpha = alpha;
       if (!seeThrough) {                                        // solid: paper backing + shadow
-        ctx.shadowColor = 'rgba(40,25,10,.25)';
-        ctx.shadowBlur = 12 * dpr;
+        ctx.shadowColor = nightOn ? 'rgba(255,196,96,.6)' : 'rgba(40,25,10,.25)';   // night: lit like under a dashboard lamp
+        ctx.shadowBlur = (nightOn ? 30 : 12) * dpr;
         ctx.fillStyle = '#fffdf6';
         ctx.fillRect(-g.w / 2, -g.h / 2, g.w, g.h);
         ctx.shadowColor = 'transparent';
@@ -235,7 +249,7 @@
       if (seeThrough && s !== selected && alpha > EDIT_OTHERS_ALPHA) {  // thin outline so overlapping edges stay visible
         ctx.globalAlpha = 0.6;
         ctx.lineWidth = 1.5 / view.scale;
-        ctx.strokeStyle = '#2a2622';
+        ctx.strokeStyle = nightOn ? '#f2c66d' : '#2a2622';
         ctx.strokeRect(-g.w / 2, -g.h / 2, g.w, g.h);
       }
       if (s === selected) {
@@ -264,11 +278,11 @@
         const num = s.id.replace(/^0/, '');
         const label = !prefs.numbers ? s.name : pxW < 70 ? num : `${num} · ${s.name}`;
         const w = ctx.measureText(label).width + 16;
-        ctx.fillStyle = 'rgba(42,38,34,.82)';
+        ctx.fillStyle = nightOn ? 'rgba(247,198,0,.92)' : 'rgba(42,38,34,.82)';    // night: taxi-sign yellow
         roundRect(sx - w / 2, sy - 12, w, 24, 12);
         ctx.fill();
         labelHits.push({ s, x: sx - w / 2, y: sy - 12, w, h: 24 });
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = nightOn ? '#1d1b18' : '#fff';
         ctx.fillText(label, sx, sy + 0.5);
       }
     }
@@ -578,7 +592,7 @@
 
   // Keyboard
   window.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     if (document.querySelector('dialog[open]')) return;   // an open dialog (About, receipt) handles its own keys; Esc closes it
     if (viewerSheet) {                                   // keys go to the full-screen viewer while it is open
       const cx = viewer.clientWidth / 2, cy = viewer.clientHeight / 2;
@@ -625,6 +639,7 @@
     else if (c === 'KeyD') { if (selected) $('cardDownload').click(); }                     // download the selected sheet
     else if (c === 'KeyS') { if (selected) $('cardShare').click(); }                        // share / copy its link
     else if (k === '?' || (c === 'Slash' && e.shiftKey)) openAbout(true);                   // help: About with Контроли open
+    else if (c === 'KeyZ') toggleNight();                 // „Ноќна смена“ on / off (zzz)
     else if (c === 'KeyK') fun.actions.ride?.();          // „Каде, шефе?“ random ride
     else if (c === 'KeyM') fun.actions.receipt?.();       // taximeter receipt
     else if (c === 'KeyP') fun.actions.game?.();          // „Погоди ја населбата“
@@ -712,6 +727,40 @@
   $('numbersToggle').checked = prefs.numbers;
   applyNumbers();
   $('numbersToggle').onchange = e => { prefs.numbers = e.target.checked; savePrefs(); applyNumbers(); requestRender(); };
+
+  // „Ноќна смена“ (night shift): 'auto' = from sunset to sunrise in Skopje, or always 'on' / 'off'.
+  // Chosen in the About dialog; Z switches it on / off.
+  function sunTimes(date, lat = 41.9981, lon = 21.4254) {   // sunrise equation (≈1 min accuracy)
+    const rad = Math.PI / 180, J = date.getTime() / 86400000 + 2440587.5;
+    const n = Math.round(J - 2451545 + 0.0008);        // this UTC calendar day (Skopje's late evening / early morning is night either way)
+    const Js = n - lon / 360;
+    const M = (357.5291 + 0.98560028 * Js) % 360;
+    const C = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad) + 0.0003 * Math.sin(3 * M * rad);
+    const L = (M + C + 180 + 102.9372) % 360;
+    const Jt = 2451545 + Js + 0.0053 * Math.sin(M * rad) - 0.0069 * Math.sin(2 * L * rad);
+    const dec = Math.asin(Math.sin(L * rad) * Math.sin(23.4397 * rad));
+    const w0 = Math.acos((Math.sin(-0.833 * rad) - Math.sin(lat * rad) * Math.sin(dec)) / (Math.cos(lat * rad) * Math.cos(dec))) / rad;
+    const toDate = j => new Date((j - 2440587.5) * 86400000);
+    return { rise: toDate(Jt - w0 / 360), set: toDate(Jt + w0 / 360) };
+  }
+  const darkOutside = (now = new Date()) => { const { rise, set } = sunTimes(now); return now < rise || now > set; };
+  function applyNight() {
+    const on = prefs.night === 'on' || (prefs.night === 'auto' && darkOutside());
+    document.querySelectorAll('input[name="night"]').forEach(r => { r.checked = r.value === prefs.night; });
+    if (on === nightOn && document.body.classList.contains('night') === on) return;
+    nightOn = on;
+    document.body.classList.toggle('night', on);
+    requestRender();
+  }
+  document.querySelectorAll('input[name="night"]').forEach(r => r.addEventListener('change', () => {
+    prefs.night = r.value; savePrefs(); applyNight();
+  }));
+  function toggleNight() {
+    prefs.night = nightOn ? 'off' : 'on'; savePrefs(); applyNight();
+    toast(nightOn ? '🌙 Ноќна смена' : '☀️ Дневна смена');
+  }
+  applyNight();
+  setInterval(applyNight, 60000);                      // 'auto' follows sunset / sunrise while the page is open
   $('creatorTools').hidden = !CREATOR;
   $('editToggle').onchange = e => { editMode = CREATOR && e.target.checked; tempSelectedAlpha = 1; syncCard(); requestRender(); };
 
@@ -1043,6 +1092,7 @@
     select, focusSheet, animateTo, spin, fitAll, toast, requestRender, closePanels,
     worldToScreen, screenToWorld, sheetGeom, metersPerUnit, yToLat, xToLon, $,
     showOnMap(s) { select(s); $('cardFocus').click(); },
+    get night() { return nightOn; }, sunTimes,
   };
 
   resize();

@@ -80,6 +80,7 @@ The creator-only **Edit layout** controls are described in [Aligning the sheets]
 | Download one sheet | `D` (the selected sheet) | Card button; ↓ in the list | Card button; ↓ in the list |
 | Download all 26 | — | Red button at the top of the list | Red button at the top of the list |
 | Share a link to the sheet | `S` (copies the link) | 🔗 on the card (copies the link) | 🔗 on the card (opens the share menu) |
+| Night shift on / off | `Z` | About dialog: **Ноќна смена** | About dialog: **Ноќна смена** |
 | Random ride (**Каде, шефе?**) | `K` | Yellow button under the logo | Yellow button under the logo |
 | Taximeter receipt | `M` | Click the taximeter | Tap the taximeter |
 | Guessing game (**Погоди**) / end it | `P` / `Esc` | **Погоди** button / × | **Погоди** button / × |
@@ -121,6 +122,27 @@ take the swipe first.
 - Keys are ignored while typing in a field.
 
 The compass needle shows where north is while the map is rotated.
+
+### Night shift (Ноќна смена)
+
+A dark mode with a taxi touch: the street map turns dark blue-grey, the hand-drawn sheets glow warmly as
+if under a dashboard lamp, the labels turn taxi-sign yellow, the interface goes dark and the **Каде, шефе?**
+roof sign lights up.
+
+Choose it in the About dialog under **Ноќна смена**: **Автоматски** (the default: on from sunset to
+sunrise in Skopje, worked out in the browser with the standard sunrise equation, accurate to a few
+minutes, and re-checked every minute), **Вклучена** (always on) or **Исклучена** (always off). The choice
+is remembered in the browser with the other display settings (`localStorage` key `taxi-maps-prefs-v1`,
+field `night`: `auto`, `on` or `off`), so it carries over to the next visit.
+
+`Z` switches it on or off directly by setting the choice to **Вклучена** or **Исклучена**, and that is
+remembered too: pressing `Z` at night for light mode keeps it light on later nights as well. Choose
+**Автоматски** in the About dialog to go back to following sunset and sunrise.
+
+While night shift is on the canvas inverts the street map and tints it (`difference` then `multiply`
+composite fills, so it works in every browser), sheets that are not selected are drawn 1.5× more opaque,
+solid sheets get a warm glow instead of a shadow, and the interface switches its colour variables
+(`body.night` in `style.css`).
 
 ### Extras
 
@@ -181,8 +203,9 @@ The sheet's number shows in a red badge next to its name only when **Show sheet 
 ### About
 
 Clicking the logo badge opens a small dialog: развиено од Бојан Божиновски, with LinkedIn and GitHub
-buttons, credits for the hand-drawn maps and OpenStreetMap, cards linking to the author's other
-projects (091 Скопје, Старо Скопје), the guessing game's scores (see [Extras](#extras)), and at the bottom a collapsible **Контроли** section (closed until clicked) listing every keyboard,
+buttons, credits for the hand-drawn maps and OpenStreetMap, the guessing game's scores (see
+[Extras](#extras)), the **Ноќна смена** (night shift) choice, cards linking to the author's other projects
+(091 Скопје, Старо Скопје), and at the bottom a collapsible **Контроли** section (closed until clicked) listing every keyboard,
 mouse / trackpad and touch control (the same as [Controls](#controls)). Its content scrolls when it does not fit the screen;
 × stays in the corner. `Esc`, × or a click outside closes it, and map keys do nothing while it is open.
 When a control changes, update both this README and the dialog in `index.html`.
