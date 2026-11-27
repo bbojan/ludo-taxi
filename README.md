@@ -269,6 +269,14 @@ under each slider shows where the default is.
   (`11 · Козле`), in the list, on the sheet card and in the full-screen viewer.
 - **Edit layout**: see below.
 
+## Link previews
+
+`social.png` (1200 × 630) is the image Twitter / X, LinkedIn, Facebook, Viber and the like show when the
+link is shared: the logo, the tagline and the hand-drawn Центар sheet. `index.html` points to it with
+Open Graph and Twitter card tags (`summary_large_image`), using the absolute GitHub Pages address. To change
+it, edit `tools/social.html` and render it again with headless Chrome (the command is in that file).
+LinkedIn caches previews; after a change, re-check the link in the LinkedIn Post Inspector.
+
 ## Analytics
 
 Google Analytics 4: property **Лудо Такси** (account bojanb), web stream **Лудо Такси (GitHub Pages)**

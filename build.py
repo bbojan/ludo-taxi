@@ -19,7 +19,7 @@ import sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, sys.argv[1] if len(sys.argv) > 1 else "dist")
 
-FILES = ["index.html", "style.css", "app.js", "fun.js", "layout.js", "layout.claude.js", "favicon.svg", "logo.svg"]
+FILES = ["index.html", "style.css", "app.js", "fun.js", "layout.js", "layout.claude.js", "favicon.svg", "logo.svg", "social.png"]
 SHEET = re.compile(r"\d{2}(-s)?\.jpg|all-originals\.zip")
 
 
