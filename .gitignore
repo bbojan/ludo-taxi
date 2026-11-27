@@ -11,3 +11,6 @@ __pycache__/
 
 # local editor / Claude Code settings
 .claude/
+
+# static build output (build.py)
+dist/

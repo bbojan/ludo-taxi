@@ -27,7 +27,7 @@
   const DEFAULT_BASE_STRENGTH = 0.45, DEFAULT_SHEET_ALPHA = 0.4;
   const EDIT_OTHERS_ALPHA = 0.05;
   let tempSelectedAlpha = 1;    // edit mode only, for checking alignment; back to 100% on every selection change
-  const prefs = Object.assign({ base: true, baseStrength: DEFAULT_BASE_STRENGTH, sheetAlpha: DEFAULT_SHEET_ALPHA, labels: true }, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'));
+  const prefs = Object.assign({ base: true, baseStrength: DEFAULT_BASE_STRENGTH, sheetAlpha: DEFAULT_SHEET_ALPHA, labels: true, numbers: false }, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'));
   let editMode = false;
   // Creator tools (Edit layout, restore/export, size/rotation/opacity sliders) only with ?edit in the URL.
   // Editing is switched OFF for now (the owner will say when to bring it back).
@@ -259,7 +259,8 @@
         if (pxW > 420 || s === selected) continue;    // readable already, or named on the open card
         const [sx, sy] = worldToScreen(g.x, g.y);
         if (sx < -100 || sx > vw + 100 || sy < -40 || sy > vh + 40) continue;
-        const label = pxW < 70 ? s.id.replace(/^0/, '') : `${s.id.replace(/^0/, '')} · ${s.name}`;
+        const num = s.id.replace(/^0/, '');
+        const label = !prefs.numbers ? s.name : pxW < 70 ? num : `${num} · ${s.name}`;
         const w = ctx.measureText(label).width + 16;
         ctx.fillStyle = 'rgba(42,38,34,.82)';
         roundRect(sx - w / 2, sy - 12, w, 24, 12);
@@ -378,7 +379,17 @@
 
   function pointerPos(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 
+  // Three-finger swipe on touch screens: left = next sheet, right = previous (map and full-screen viewer).
+  // While three fingers are down nothing pans or zooms; the step happens when the last finger lifts.
+  const swipe3 = { map: null, viewer: null };
+  const centroid = pts => { const q = pts.slice(0, 3); return [q.reduce((a, p) => a + p[0], 0) / q.length, q.reduce((a, p) => a + p[1], 0) / q.length]; };
+  function swipe3Done(sw, step) {
+    const dx = sw.last[0] - sw.start[0], dy = sw.last[1] - sw.start[1];
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1);
+  }
+
   function beginGesture() {
+    if (swipe3.map) { gesture = null; return; }      // a three-finger swipe is in progress
     const pts = [...pointers.values()];
     if (pts.length === 1) {
       const p = pts[0];
@@ -405,6 +416,11 @@
     canvas.setPointerCapture(e.pointerId);
     const [x, y] = pointerPos(e);
     pointers.set(e.pointerId, { x, y, rotateMode: e.button === 2 || (e.pointerType === 'mouse' && e.shiftKey) });
+    if (pointers.size === 3 && e.pointerType === 'touch' && !swipe3.map) {
+      if (gesture?.type === 'pinch' && !gesture.sheet0) Object.assign(view, gesture.view0);   // undo the brief pinch
+      const c = centroid([...pointers.values()].map(p => [p.x, p.y]));
+      swipe3.map = { start: c, last: c };
+    }
     stopAnim();
     tapInfo = pointers.size === 1 ? { x, y, t: performance.now(), moved: false } : null;
     beginGesture();
@@ -420,6 +436,7 @@
     if (!p) return;
     const [x, y] = pointerPos(e);
     p.x = x; p.y = y;
+    if (swipe3.map && pointers.size >= 3) swipe3.map.last = centroid([...pointers.values()].map(q => [q.x, q.y]));
     if (tapInfo && Math.hypot(x - tapInfo.x, y - tapInfo.y) > 6) tapInfo.moved = true;
     if (!gesture) return;
 
@@ -468,10 +485,18 @@
     if (!pointers.has(e.pointerId)) return;
     const [x, y] = pointerPos(e);
     pointers.delete(e.pointerId);
+    if (swipe3.map && pointers.size === 0) {
+      const sw = swipe3.map; swipe3.map = null;
+      if (e.type === 'pointerup') swipe3Done(sw, stepSelection);
+    }
     if (tapInfo && !tapInfo.moved && pointers.size === 0 && e.type === 'pointerup' && performance.now() - tapInfo.t < 400) {
       const now = performance.now();
       if (now - lastTap.t < 320 && Math.hypot(x - lastTap.x, y - lastTap.y) < 30) {
-        zoomBy(2, x, y);                       // double tap / double click
+        // mouse double click on a sheet does what the card's "На карта" / "Назад" button does;
+        // a double tap on touch, on the empty map, or while editing the layout zooms in
+        const s = editMode || e.pointerType === 'touch' ? null : sheetAt(x, y);
+        if (s) { select(s); $('cardFocus').click(); }
+        else zoomBy(2, x, y);
         lastTap.t = 0;
       } else {
         lastTap = { t: now, x, y };
@@ -492,6 +517,20 @@
   }
 
   // ---------- Input: wheel / trackpad ----------
+  // Sideways scroll (a mouse's side wheel, or a sideways trackpad swipe) steps one sheet per flick:
+  // scroll right = next, left = previous. After a step it waits until the scrolling stops,
+  // so the momentum of a trackpad swipe does not skip through several sheets.
+  const hWheel = { acc: 0, locked: false, timer: 0 };
+  function horizontalWheelStep(dx, dy, step) {
+    if (!dx || Math.abs(dx) <= Math.abs(dy) * 2) return false;
+    clearTimeout(hWheel.timer);
+    hWheel.timer = setTimeout(() => { hWheel.locked = false; hWheel.acc = 0; }, 200);
+    if (hWheel.locked) return true;
+    hWheel.acc += dx;
+    if (Math.abs(hWheel.acc) >= 8) { hWheel.locked = true; step(Math.sign(hWheel.acc)); }
+    return true;
+  }
+
   canvas.addEventListener('wheel', e => {
     viewTouched = true;
     e.preventDefault();
@@ -505,6 +544,8 @@
       saveLayout(); syncCard(); requestRender();
     } else if (e.shiftKey || e.altKey) {
       rotateBy((dy || dx) * 0.003, x, y);
+    } else if (!e.ctrlKey && horizontalWheelStep(dx, dy, stepSelection)) {
+      // sideways scroll: next / previous sheet, like Page Down / Page Up
     } else {
       // Scroll always zooms, keeping the point under the mouse fixed.
       // ctrlKey = trackpad pinch (small deltas), so it gets a stronger factor.
@@ -536,19 +577,45 @@
     if (e.target.tagName === 'INPUT') return;
     if (viewerSheet) {                                   // keys go to the full-screen viewer while it is open
       const cx = viewer.clientWidth / 2, cy = viewer.clientHeight / 2;
-      if (e.key === 'Escape') closeViewer();
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Escape' || e.code === 'KeyF') closeViewer();
       else if (e.key === '+' || e.key === '=') zoomViewer(1.5, cx, cy);
       else if (e.key === '-' || e.key === '_') zoomViewer(1 / 1.5, cx, cy);
-      else if (e.key === '0' || e.key === 'r') fitViewer();
+      else if (e.key === '0' || e.code === 'KeyR') fitViewer();
+      else if (e.key.startsWith('Arrow')) {              // move the scan, like the arrow keys move the map
+        e.preventDefault();
+        const d = 80;
+        const [ox, oy] = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+        vt.x -= ox; vt.y -= oy;
+        applyViewer();
+      }
+      else if (['.', '>', 'PageDown', ',', '<', 'PageUp'].includes(e.key)) {   // next / previous sheet, full screen
+        e.preventDefault();
+        viewerStep(['.', '>', 'PageDown'].includes(e.key) ? 1 : -1);
+      }
       return;
     }
-    const k = e.key;
-    if (k === '+' || k === '=') zoomBy(1.5);
-    else if (k === '-' || k === '_') zoomBy(1 / 1.5);
-    else if (k === 'q' || k === '[') rotateBy(-Math.PI / 24);
-    else if (k === 'e' || k === ']') rotateBy(Math.PI / 24);
-    else if (k === '0' || k === 'r') animateTo(fitAll());
-    else if (k === 'n') animateTo({ rot: 0 });
+    if (e.metaKey || e.ctrlKey || e.altKey) return;      // leave browser shortcuts (Cmd +/−, Cmd V, …) alone
+    // Letter keys go by physical key (e.code), so they also work with a Macedonian keyboard layout.
+    // The toolbar keys press their buttons, so a key does exactly what its button does.
+    const k = e.key, c = e.code;
+    if (k === '+' || k === '=') $('zoomIn').click();
+    else if (k === '-' || k === '_') $('zoomOut').click();
+    else if (c === 'KeyN') $('compass').click();
+    else if (c === 'KeyR' || k === '0') $('reset').click();
+    else if (c === 'KeyL') $('listBtn').click();
+    else if (c === 'KeyV') $('layersBtn').click();
+    else if (c === 'KeyQ' || c === 'BracketLeft') rotateBy(-Math.PI / 24);
+    else if (c === 'KeyE' || c === 'BracketRight') rotateBy(Math.PI / 24);
+    else if (k === '.' || k === '>' || k === 'PageDown') { e.preventDefault(); stepSelection(1); }
+    else if (k === ',' || k === '<' || k === 'PageUp') { e.preventDefault(); stepSelection(-1); }
+    else if ((k === 'Enter' || k === ' ') && !e.target.closest?.('button, a, [tabindex]')) {
+      // Enter / Space: with nothing selected, select sheet 1; otherwise "На карта", and again "Назад"
+      e.preventDefault();
+      if (!selected) stepSelection(1); else $('cardFocus').click();
+    }
+    else if (c === 'KeyF') { if (!selected) stepSelection(1); $('cardFull').click(); }   // full screen
+    else if (k === 'Escape' && selected && viewBeforeFocus) $('cardFocus').click();   // "Назад": fly back first
     else if (k === 'Escape') { select(null); closePanels(); }
     else if (k.startsWith('Arrow')) {
       const d = 80;
@@ -624,6 +691,11 @@
   $('baseToggle').onchange = e => { prefs.base = e.target.checked; savePrefs(); requestRender(); };
   $('opacity').oninput = e => { prefs.sheetAlpha = magnetic(e.target, DEFAULT_SHEET_ALPHA); savePrefs(); requestRender(); };
   $('labelsToggle').onchange = e => { prefs.labels = e.target.checked; savePrefs(); requestRender(); };
+  // sheet numbers (map labels, list, card, viewer): hidden unless the visitor turns them on
+  const applyNumbers = () => document.body.classList.toggle('hide-nums', !prefs.numbers);
+  $('numbersToggle').checked = prefs.numbers;
+  applyNumbers();
+  $('numbersToggle').onchange = e => { prefs.numbers = e.target.checked; savePrefs(); applyNumbers(); requestRender(); };
   $('creatorTools').hidden = !CREATOR;
   $('editToggle').onchange = e => { editMode = CREATOR && e.target.checked; tempSelectedAlpha = 1; syncCard(); requestRender(); };
 
@@ -661,7 +733,7 @@
   let viewBeforeFocus = null;
   function syncFocusBtn() {
     $('cardFocus').textContent = viewBeforeFocus ? 'Назад' : 'На карта';
-    $('cardFocus').title = viewBeforeFocus ? 'Врати ја картата каде што беше' : 'Прикажи ја мапата исправена на картата';
+    $('cardFocus').title = viewBeforeFocus ? 'Врати ја картата каде што беше (Enter или Esc)' : 'Прикажи ја мапата исправена на картата (Enter)';
   }
   $('cardFocus').onclick = () => {
     if (!selected) return;
@@ -669,6 +741,19 @@
     else { viewBeforeFocus = { cx: view.cx, cy: view.cy, scale: view.scale, rot: view.rot }; focusSheet(selected); }
     syncFocusBtn();
   };
+  // Keyboard: select the next / previous sheet by number, wrapping round. While a sheet is shown
+  // with "На карта", the next one is shown the same way and "Назад" still returns to the original view;
+  // otherwise the map only pans when the newly selected sheet is off screen.
+  const byId = [...sheets].sort((a, b) => a.id < b.id ? -1 : 1);
+  function stepSelection(dir) {
+    const i = byId.indexOf(selected), n = byId.length;
+    const next = byId[i < 0 ? (dir > 0 ? 0 : n - 1) : (i + dir + n) % n];
+    const back = viewBeforeFocus;
+    select(next);
+    if (back) { viewBeforeFocus = back; syncFocusBtn(); focusSheet(next); return; }
+    const g = sheetGeom(next), [sx, sy] = worldToScreen(g.x, g.y);
+    if (sx < 60 || sx > vw - 60 || sy < 60 || sy > vh - 160) animateTo({ cx: g.x, cy: g.y });
+  }
   $('widthRange').oninput = e => { selected.width = +e.target.value; saveLayout(); syncCard(); requestRender(); };
   $('tempAlphaRange').oninput = e => { tempSelectedAlpha = +e.target.value; $('tempAlphaVal').textContent = Math.round(tempSelectedAlpha * 100) + '%'; requestRender(); };
   $('rotRange').oninput = e => { selected.rot = +e.target.value; saveLayout(); syncCard(); requestRender(); };
@@ -790,6 +875,12 @@
     if (e.target.closest('.viewer-bar')) return;
     viewer.setPointerCapture(e.pointerId);
     vPointers.set(e.pointerId, vPos(e));
+    if (vPointers.size === 3 && e.pointerType === 'touch' && !swipe3.viewer) {
+      if (vGesture?.t0) { const t = vGesture.t0; vt.s = t.s; vt.x = t.x; vt.y = t.y; }   // undo the brief pinch
+      applyViewer();
+      const c = centroid([...vPointers.values()]);
+      swipe3.viewer = { start: c, last: c };
+    }
     viewer.classList.add('dragging');
     vBegin();
     if (vPointers.size === 1) {
@@ -802,7 +893,13 @@
     }
   });
   viewer.addEventListener('pointermove', e => {
-    if (!vPointers.has(e.pointerId) || !vGesture) return;
+    if (!vPointers.has(e.pointerId)) return;
+    if (swipe3.viewer) {
+      vPointers.set(e.pointerId, vPos(e));
+      if (vPointers.size >= 3) swipe3.viewer.last = centroid([...vPointers.values()]);
+      return;
+    }
+    if (!vGesture) return;
     vPointers.set(e.pointerId, vPos(e));
     const pts = [...vPointers.values()];
     if (pts.length === 1) {
@@ -820,12 +917,27 @@
       applyViewer();
     }
   });
-  const vEnd = e => { vPointers.delete(e.pointerId); vBegin(); if (!vPointers.size) viewer.classList.remove('dragging'); };
+  const vEnd = e => {
+    vPointers.delete(e.pointerId);
+    if (swipe3.viewer && !vPointers.size) {
+      const sw = swipe3.viewer; swipe3.viewer = null;
+      if (e.type === 'pointerup') swipe3Done(sw, viewerStep);
+    }
+    vBegin();
+    if (!vPointers.size) viewer.classList.remove('dragging');
+  };
   viewer.addEventListener('pointerup', vEnd);
   viewer.addEventListener('pointercancel', vEnd);
+  function viewerStep(dir) {                    // next / previous sheet in full screen; the map and card follow behind
+    if (selected !== viewerSheet) select(viewerSheet);
+    stepSelection(dir);
+    openViewer(selected);
+  }
   viewer.addEventListener('wheel', e => {
     e.preventDefault();
     let dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    const dx = e.deltaMode === 1 ? e.deltaX * 16 : e.deltaX;
+    if (!e.ctrlKey && !e.shiftKey && horizontalWheelStep(dx, dy, viewerStep)) return;
     dy = Math.max(-300, Math.min(300, dy));
     zoomViewer(Math.exp(-dy * (e.ctrlKey ? 0.012 : 0.0025)), e.clientX, e.clientY);
   }, { passive: false });
@@ -836,16 +948,24 @@
   $('viewerDownload').addEventListener('click', e => { if (viewerSheet) downloadOriginal(e, viewerSheet); });
   window.addEventListener('resize', () => { if (viewerSheet) fitViewer(); });
 
-  // ---------- Links to a sheet: #<name> in the address (a number like #23 works too) ----------
-  const slug = s => s.name.toLowerCase().normalize('NFC').replace(/,/g, '').trim().replace(/\s+/g, '-');
-  const linkFor = s => location.origin + location.pathname + '#' + encodeURIComponent(slug(s));   // never includes ?edit
+  // ---------- Links to a sheet: #<name in Latin letters> in the address, e.g. #shuto-orizari ----------
+  // Older links with the Cyrillic name (#шуто-оризари) and plain numbers (#23) still open the sheet.
+  const LATIN = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', ѓ: 'gj', е: 'e', ж: 'zh', з: 'z', ѕ: 'dz', и: 'i', ј: 'j',
+    к: 'k', л: 'l', љ: 'lj', м: 'm', н: 'n', њ: 'nj', о: 'o', п: 'p', р: 'r', с: 's', т: 't', ќ: 'kj', у: 'u',
+    ф: 'f', х: 'h', ц: 'c', ч: 'ch', џ: 'dzh', ш: 'sh' };
+  const cyrSlug = s => s.name.toLowerCase().normalize('NFC').replace(/,/g, '').trim().replace(/\s+/g, '-');
+  const slug = s => [...cyrSlug(s)].map(ch => LATIN[ch] ?? ch).join('');
+  const linkFor = s => location.origin + location.pathname + '#' + slug(s);   // never includes ?edit
   function sheetFromHash() {
-    const h = decodeURIComponent(location.hash.slice(1)).toLowerCase().normalize('NFC');
+    let h = location.hash.slice(1);
+    try { h = decodeURIComponent(h); } catch { /* malformed escape: use as typed */ }
+    h = h.toLowerCase().normalize('NFC');
     if (!h) return null;
-    return sheets.find(s => slug(s) === h) || sheets.find(s => /^\d+$/.test(h) && +s.id === +h) || null;
+    return sheets.find(s => slug(s) === h) || sheets.find(s => cyrSlug(s) === h)
+      || sheets.find(s => /^\d+$/.test(h) && +s.id === +h) || null;
   }
   function syncHash() {
-    const want = selected ? '#' + encodeURIComponent(slug(selected)) : '';
+    const want = selected ? '#' + slug(selected) : '';
     if (location.hash !== want) history.replaceState(null, '', location.pathname + location.search + want);
   }
   function openFromHash() {

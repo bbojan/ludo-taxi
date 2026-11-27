@@ -29,6 +29,9 @@ canvas#map.dragging { cursor: grabbing; }
   max-height: calc(100% - 90px); overflow: auto; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px; }
 .panel-head, .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .panel-head strong { flex: 1; }
+/* the panel title and × stay at the top while the panel scrolls */
+.panel-head { position: sticky; top: -12px; z-index: 1; margin: -12px -14px 8px; padding: 12px 14px 6px;
+  background: #fffcf5; border-radius: 14px 14px 0 0; }
 .close { margin-left: auto; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 6px; }
 .hidden { display: none !important; }
 
@@ -36,6 +39,7 @@ canvas#map.dragging { cursor: grabbing; }
 #sheetList li { display: flex; align-items: center; gap: 10px; padding: 7px 6px; border-radius: 8px; cursor: pointer; }
 #sheetList li:hover { background: rgba(0,0,0,.05); }
 #sheetList img { width: 34px; height: 34px; object-fit: cover; border-radius: 6px; box-shadow: 0 0 0 1px var(--line); }
+.hide-nums .num { display: none; }
 .num { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600; color: #fff; background: var(--accent);
   border-radius: 999px; min-width: 24px; height: 24px; display: inline-grid; place-items: center; padding: 0 6px; }
 
@@ -153,3 +157,14 @@ body.card-open .attribution { display: none; }
 .about a.link:hover { background: #000; }
 .about .credits { margin: 0; font-size: 11px; color: var(--muted); line-height: 1.5; }
 .about .credits a { color: inherit; }
+.about .more { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--line); }
+.about .more h3 { grid-column: 1 / -1; margin: 0; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .06em; }
+.about .more a { display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  color: var(--ink); text-decoration: none; transition: border-color .15s, transform .15s, box-shadow .15s; }
+.about .more a:hover { border-color: var(--ink); transform: translateY(-1px); box-shadow: var(--shadow); }
+.about .more a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.about .more img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; margin: 0;
+  border-bottom: 1px solid var(--line); }
+.about .more span { display: block; padding: 6px 8px 7px; font-size: 13px; font-weight: 600; }

@@ -33,23 +33,93 @@ Edits made that way stay in the phone's browser.
 The base street map comes from OpenStreetMap tiles, so that layer needs internet access. The hand-drawn
 sheets work offline.
 
-Any static host works too (GitHub Pages, Netlify, an S3 bucket): upload `index.html`, `style.css`,
-`app.js`, `layout.js` and the `sheets/` folder.
+## Static build and GitHub Pages
+
+The published site is plain static files. Build it with:
+
+```bash
+python3 build.py
+```
+
+This writes `dist/` (gitignored) with only what the page loads: `index.html`, `style.css`, `app.js`,
+`layout.js`, `layout.claude.js`, the two SVGs, `projects/` (thumbnails for the About dialog) and `sheets/` (including `all-originals.zip`, which it
+creates with `make_zip.py` if missing). The CSS and script links in `dist/index.html` get a `?v=<hash>`
+so visitors get the new files after a deploy. Preview it with
+`python3 -m http.server 8000 --directory dist`.
+
+Every push to `main` deploys `dist/` to GitHub Pages through `.github/workflows/pages.yml`. One-time
+setup: in the repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
+
+On the published site, **Edit layout** still works but can't write `layout.js`: changes stay in that
+browser. To change the layout for everyone, edit locally with `server.py`, commit `layout.js` and push.
+
+Any other static host (Netlify, an S3 bucket) works the same way: upload the contents of `dist/`.
 
 ## Controls
 
-| Action | Mouse / trackpad | Touch |
-|---|---|---|
-| Pan | Drag | Drag with one finger |
-| Zoom | Scroll (mouse wheel or trackpad) zooms toward the mouse pointer; also trackpad pinch, double-click, `+` / `−` buttons or keys | Pinch, double-tap |
-| Rotate | Shift + drag, right-drag, Shift + wheel, Safari trackpad rotate, `Q` / `E` keys | Twist with two fingers |
-| North up | Compass button or `N` | Compass button |
-| Reset view (zoom and rotation) | ↺ button, `R` or `0` | ↺ button |
-| Select a sheet | Click it or its number/name label | Tap it or its label |
-| Move around | Arrow keys | — |
-| Close card or panels | `Esc` | × |
+Every action, by input. "Button" means the on-screen button, which works the same with a mouse or a finger.
+The creator-only **Edit layout** controls are described in [Aligning the sheets](#aligning-the-sheets).
+
+### On the map
+
+| Action | Keyboard | Mouse / trackpad | Touch (phone, tablet) |
+|---|---|---|---|
+| Pan | Arrow keys | Drag | Drag with one finger |
+| Zoom in / out | `+` / `−` (same as the buttons: 2×, animated) | Scroll wheel or two-finger scroll, toward the pointer; trackpad pinch; `+` / `−` buttons | Pinch; `+` / `−` buttons |
+| Zoom in 2× at a point | — | Double-click the empty map | Double-tap anywhere |
+| Rotate | `Q` / `E` or `[` / `]` | Shift + drag, right-drag, Shift + wheel, Safari trackpad rotate | Twist with two fingers |
+| North up | `N` | Compass button | Compass button |
+| Reset view (whole city, north up) | `R` or `0` | ↺ button | ↺ button |
+| Select a sheet | Enter or Space with nothing selected picks sheet 1; then next / previous below | Click the sheet or its label | Tap the sheet or its label |
+| Next / previous sheet (by number, wraps round) | `.` / `,` or Page Down / Page Up | Scroll sideways (a mouse's side wheel or a sideways trackpad swipe): right = next, one sheet per flick | Swipe sideways with three fingers: left = next |
+| Show on map (turns the sheet upright and fills the screen) / Back | Enter or Space (again to go back); `Esc` also goes back | Double-click the sheet (again to go back); card button | Card button |
+| Back after Show on map, then close the card and panels | `Esc` (first press goes back, second closes) | ×; clicking the empty map closes the card | ×; tapping the empty map closes the card |
+| Sheet list (☰) | `L` | ☰ button | ☰ button |
+| View settings | `V` | Layers button | Layers button |
+| Full screen | `F` (with nothing selected: sheet 1) | Card button | Card button |
+| Download one sheet | — | Card button; ↓ in the list | Card button; ↓ in the list |
+| Download all 26 | — | Red button at the top of the list | Red button at the top of the list |
+| Share a link to the sheet | — | 🔗 on the card (copies the link) | 🔗 on the card (opens the share menu) |
+| About | Tab to the logo, then Enter or Space | Click the logo | Tap the logo |
+
+While a sheet is shown with **Show on map**, next / previous shows the next sheet the same way, and Back still
+returns to where the map was before. Otherwise the map only moves when the newly selected sheet is off screen.
+
+### In the full-screen viewer
+
+| Action | Keyboard | Mouse / trackpad | Touch (phone, tablet) |
+|---|---|---|---|
+| Move the scan | Arrow keys | Drag | Drag with one finger |
+| Zoom in / out | `+` / `−` | Scroll wheel or two-finger scroll, toward the pointer; trackpad pinch | Pinch |
+| Zoom in 2.5× at a point, or back to fit | — | Double-click | Double-tap |
+| Fit the whole sheet | `0` or `R` | **Fit** button | **Fit** button |
+| Next / previous sheet | `.` / `,` or Page Down / Page Up | Scroll sideways, as on the map | Swipe sideways with three fingers: left = next |
+| Download | — | Download button | Download button |
+| Close | `Esc` or `F` | × | × |
+
+The map and the sheet card follow along behind the viewer, so after closing it the card shows the last sheet
+you looked at.
+
+The three-finger swipe steps once when the fingers lift, and only for a clearly sideways swipe of at least
+50 px. While three fingers are down the map does not pan or zoom. Some phones use three-finger gestures
+themselves (iOS: undo / redo while editing text; some Android phones: screenshots), and the system may
+take the swipe first.
+
+### Keyboard notes
+
+- The toolbar keys (`+`, `−`, `N`, `R`, `L`, `V`) press their buttons, so a key does exactly what its button
+  does, and each button's tooltip shows its key.
+- Letter keys go by the physical key, so they also work with a Macedonian keyboard layout.
+- Enter and Space only act on the map when no button or link has keyboard focus; otherwise they press
+  that button, as usual.
+- Keys pressed together with Cmd, Ctrl or Alt are left to the browser (page zoom, paste, …).
+- Keys are ignored while typing in a field.
 
 The compass needle shows where north is while the map is rotated.
+
+### Not covered yet
+
+- **Keyboard:** no key for download or share.
 
 ### Downloads
 
@@ -82,11 +152,13 @@ The interface is in Macedonian.
 
 ### Links to a sheet
 
-The address follows the selected sheet: selecting Центар changes it to `…/#центар`, and deselecting
+The address follows the selected sheet: selecting Центар changes it to `…/#centar`, and deselecting
 removes it. Opening such a link goes straight to that sheet, selected and upright; **Back** on its card
-then shows the whole city. Links use the sheet's name (spaces become `-`, commas are dropped, for
-example `#скопје-север-бутел-2`), so they keep working if sheets are renumbered. A number such as `#23`
-works too. The link icon on the card opens the phone's share menu, or copies the link on a computer.
+then shows the whole city. Links use the sheet's name in Latin letters (spaces become `-`, commas are
+dropped, for example `#skopje-sever-butel-2`), so they keep working if sheets are renumbered and stay
+readable when pasted anywhere. The letters follow the usual Macedonian romanisation (ѓ gj, ж zh, ѕ dz,
+љ lj, њ nj, ќ kj, ц c, ч ch, џ dzh, ш sh). Older links with the Cyrillic name (`#центар`) and a number
+such as `#23` work too. The link icon on the card opens the phone's share menu, or copies the link on a computer.
 Shared links never include `?edit`.
 
 ### List of sheets
