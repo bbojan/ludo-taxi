@@ -27,7 +27,7 @@
   const DEFAULT_BASE_STRENGTH = 0.45, DEFAULT_SHEET_ALPHA = 0.4;
   const EDIT_OTHERS_ALPHA = 0.05;
   let tempSelectedAlpha = 1;    // edit mode only, for checking alignment; back to 100% on every selection change
-  const prefs = Object.assign({ base: true, baseStrength: DEFAULT_BASE_STRENGTH, sheetAlpha: DEFAULT_SHEET_ALPHA, labels: true, numbers: false, night: 'auto' }, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'));
+  const prefs = Object.assign({ base: true, baseStrength: DEFAULT_BASE_STRENGTH, sheetAlpha: DEFAULT_SHEET_ALPHA, labels: true, numbers: false, night: 'auto', taxi: true }, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'));
   let editMode = false;
   // Creator tools (Edit layout, restore/export, size/rotation/opacity sliders) only with ?edit in the URL.
   // Editing is switched OFF for now (the owner will say when to bring it back).
@@ -331,6 +331,12 @@
     if (t >= 1) { anim = null; view.rot = Math.atan2(Math.sin(view.rot), Math.cos(view.rot)); }
   }
   const stopAnim = () => { anim = null; };
+  // A flight to or from a sheet (Show on map / Back, next / previous, rides, links). With the little taxi
+  // switched on it takes a bit longer so the ride can be seen; fun.js draws the taxi.
+  function flyTo(target, ms = 450) {
+    animateTo(target, prefs.taxi ? Math.max(ms, 750) : ms);
+    fun.onFlight?.(anim);
+  }
 
   function fitAll() {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -345,7 +351,7 @@
   function focusSheet(s) {
     const g = sheetGeom(s);
     const scale = clampScale(Math.min((vw - 30) / g.w, (vh - 150) / g.h));
-    animateTo({ cx: g.x, cy: g.y, scale, rot: -g.r });
+    flyTo({ cx: g.x, cy: g.y, scale, rot: -g.r });
   }
   function zoomBy(f, sx = vw / 2, sy = vh / 2) {
     stopAnim();
@@ -724,6 +730,8 @@
   $('labelsToggle').onchange = e => { prefs.labels = e.target.checked; savePrefs(); requestRender(); };
   // sheet numbers (map labels, list, card, viewer): hidden unless the visitor turns them on
   const applyNumbers = () => document.body.classList.toggle('hide-nums', !prefs.numbers);
+  $('taxiToggle').checked = prefs.taxi;
+  $('taxiToggle').onchange = e => { prefs.taxi = e.target.checked; savePrefs(); };
   $('numbersToggle').checked = prefs.numbers;
   applyNumbers();
   $('numbersToggle').onchange = e => { prefs.numbers = e.target.checked; savePrefs(); applyNumbers(); requestRender(); };
@@ -802,7 +810,7 @@
   }
   $('cardFocus').onclick = () => {
     if (!selected) return;
-    if (viewBeforeFocus) { animateTo(viewBeforeFocus); viewBeforeFocus = null; }
+    if (viewBeforeFocus) { flyTo(viewBeforeFocus); viewBeforeFocus = null; }
     else { viewBeforeFocus = { cx: view.cx, cy: view.cy, scale: view.scale, rot: view.rot }; focusSheet(selected); }
     syncFocusBtn();
   };
@@ -817,7 +825,7 @@
     select(next);
     if (back) { viewBeforeFocus = back; syncFocusBtn(); focusSheet(next); return; }
     const g = sheetGeom(next), [sx, sy] = worldToScreen(g.x, g.y);
-    if (sx < 60 || sx > vw - 60 || sy < 60 || sy > vh - 160) animateTo({ cx: g.x, cy: g.y });
+    if (sx < 60 || sx > vw - 60 || sy < 60 || sy > vh - 160) flyTo({ cx: g.x, cy: g.y });
   }
   $('widthRange').oninput = e => { selected.width = +e.target.value; saveLayout(); syncCard(); requestRender(); };
   $('tempAlphaRange').oninput = e => { tempSelectedAlpha = +e.target.value; $('tempAlphaVal').textContent = Math.round(tempSelectedAlpha * 100) + '%'; requestRender(); };
@@ -1093,6 +1101,7 @@
     worldToScreen, screenToWorld, sheetGeom, metersPerUnit, yToLat, xToLon, $,
     showOnMap(s) { select(s); $('cardFocus').click(); },
     get night() { return nightOn; }, sunTimes,
+    get anim() { return anim; },
   };
 
   resize();

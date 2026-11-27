@@ -310,6 +310,91 @@
     localStorage.removeItem('taxi-maps-guess-best'); }
   showStats();
 
+  // ---------- 2. The little taxi on flights ----------
+  // When the map flies to or from a sheet, a small taxi (like the one in the logo) drives along the flight:
+  // the camera follows it, with a slight swerve, then it parks with a bounce and a puff and fades away.
+  const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;   // same easing as the map flight
+  const PARK_MS = 900, FADE_MS = 300;
+  let trip = null;
+  fun.onFlight = a => {
+    if (!a || !T.prefs.taxi || game) { trip = null; return; }
+    const dx = a.to.cx - a.from.cx, dy = a.to.cy - a.from.cy, len = Math.hypot(dx, dy);
+    if (len * Math.max(a.from.scale, a.to.scale) < 40) { trip = null; return; }   // hardly moves: no taxi
+    trip = { a, dx, dy, len, side: Math.random() < .5 ? -1 : 1, lastPos: null, heading: Math.atan2(dy, dx) };
+    T.requestRender();
+  };
+  const tripWorld = (tr, e) => {                         // the flight's centre line plus a gentle sideways arc
+    const { a, dx, dy, len, side } = tr, arc = Math.sin(Math.PI * e) * len * 0.08 * side;
+    return [a.from.cx + dx * e - dy / len * arc, a.from.cy + dy * e + dx / len * arc];
+  };
+  fun.afterRender.push((ctx, now) => {
+    if (!trip) return;
+    const { a } = trip, t = (now - a.t0) / a.ms;
+    if (t < 1 && T.anim !== a) { trip = null; return; }   // the flight was interrupted (drag, another flight)
+    const e = ease(Math.min(1, Math.max(0, t)));
+    const [x, y] = T.worldToScreen(...tripWorld(trip, e));
+    if (trip.lastPos && t < 1) {
+      const mx = x - trip.lastPos[0], my = y - trip.lastPos[1];
+      if (Math.hypot(mx, my) > 0.5) trip.heading = Math.atan2(my, mx);
+    }
+    trip.lastPos = [x, y];
+    const parked = Math.max(0, now - a.t0 - a.ms);
+    if (parked > PARK_MS + FADE_MS) { trip = null; T.requestRender(); return; }
+    const alpha = parked > PARK_MS ? 1 - (parked - PARK_MS) / FADE_MS : Math.min(1, t * 6);
+    const bounce = parked > 0 && parked < 400 ? Math.sin(parked / 400 * Math.PI * 2) * 2.5 * (1 - parked / 400) : 0;
+    drawTaxi(ctx, x, y - bounce, trip.heading, alpha, t < 1 ? now : 0, parked);
+    T.requestRender();
+  });
+  function drawTaxi(ctx, x, y, heading, alpha, driving, parked) {
+    const left = Math.cos(heading) < 0;
+    let tilt = left ? heading - Math.PI : heading;       // nose up / down a little with the direction of travel
+    tilt = Math.atan2(Math.sin(tilt), Math.cos(tilt));
+    tilt = Math.max(-0.45, Math.min(0.45, tilt));
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.translate(x, y);
+    ctx.rotate(tilt);
+    if (left) ctx.scale(-1, 1);
+    const ink = '#2a2622';
+    if (T.night) {                                        // headlight beam
+      const g = ctx.createLinearGradient(22, 0, 90, 0);
+      g.addColorStop(0, 'rgba(255,230,150,.55)'); g.addColorStop(1, 'rgba(255,230,150,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(22, -5); ctx.lineTo(90, -22); ctx.lineTo(90, 14); ctx.closePath(); ctx.fill();
+    }
+    if (parked > 0 && parked < 700) {                     // puff of exhaust behind
+      const p = parked / 700;
+      ctx.fillStyle = `rgba(150,150,150,${0.5 * (1 - p)})`;
+      for (const [ox, oy, r] of [[-28, 0, 4], [-34, -4, 5], [-41, -2, 6]]) {
+        ctx.beginPath(); ctx.arc(ox - p * 10, oy - p * 6, r * (0.6 + p), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+    ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.lineJoin = 'round';
+    ctx.fillStyle = '#f7c600';                            // body
+    ctx.beginPath();
+    ctx.moveTo(-22, 4); ctx.lineTo(-22, -6); ctx.quadraticCurveTo(-22, -10, -17, -10);
+    ctx.lineTo(-11, -10); ctx.lineTo(-7, -18); ctx.lineTo(8, -18); ctx.lineTo(13, -10);
+    ctx.lineTo(19, -10); ctx.quadraticCurveTo(23, -9, 23, -4); ctx.lineTo(23, 4); ctx.closePath();
+    ctx.fill(); ctx.shadowColor = 'transparent'; ctx.stroke();
+    ctx.fillStyle = T.night ? '#ffe9a8' : '#bfe3f2';      // windows (lit inside at night)
+    ctx.beginPath(); ctx.moveTo(-9, -11); ctx.lineTo(-6, -16); ctx.lineTo(0, -16); ctx.lineTo(0, -11); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(2, -11); ctx.lineTo(2, -16); ctx.lineTo(7, -16); ctx.lineTo(10.5, -11); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = ink;                                  // chequered stripe
+    for (let i = 0; i < 9; i++) if (i % 2 === 0) ctx.fillRect(-18 + i * 4, -4, 4, 3);
+    ctx.fillStyle = T.night ? '#fff6c2' : '#fff';         // roof sign
+    ctx.fillRect(-5, -23, 10, 5); ctx.strokeRect(-5, -23, 10, 5);
+    ctx.fillStyle = '#ffd94a';                            // headlight
+    ctx.beginPath(); ctx.arc(21, -5, 2, 0, Math.PI * 2); ctx.fill();
+    const spin = driving ? driving / 60 : 0;              // wheels, turning while driving
+    for (const wx of [-12, 13]) {
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(wx, 4, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(wx + Math.cos(spin) * 3, 4 + Math.sin(spin) * 3); ctx.lineTo(wx - Math.cos(spin) * 3, 4 - Math.sin(spin) * 3); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   $('rideBtn').onclick = ride;
   $('gameBtn').onclick = startGame;
 })();

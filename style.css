@@ -151,7 +151,7 @@ body.card-open .attribution { display: none; }
 .share { margin-left: auto; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px 6px; border-radius: 8px; display: grid; place-items: center; }
 .share:hover { color: var(--ink); background: rgba(0,0,0,.05); }
 .share + .close { margin-left: 0; }
-.toast { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--ink); color: var(--paper);
+.toast { position: fixed; left: 50%; top: max(72px, 16%); transform: translate(-50%, -50%);   /* above the middle, where the flight taxi drives */ background: var(--ink); color: var(--paper);
   padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); opacity: 0; pointer-events: none;
   transition: opacity .2s; z-index: 20; }
 .toast.show { opacity: 1; }

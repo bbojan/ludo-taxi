@@ -164,6 +164,12 @@ Under the logo, a little left column has three playful extras (all in `fun.js`):
   its date), the number of games and the last score, a **Играј** button, and **Избриши**, which clears them
   after a second confirming click (**Сигурно? Избриши**). Scores are kept only in this browser
   (`localStorage` key `taxi-maps-guess`).
+- **The little taxi:** whenever the map flies to or from a sheet (**Show on map** / **Back**, next / previous,
+  **Каде, шефе?**, opening a link), a small yellow taxi like the one in the logo drives along the flight:
+  the camera follows it with a slight swerve, it faces the way it's going (wheels turning, headlight beam
+  at night), then parks on the sheet with a bounce and a puff of exhaust and fades out after about a
+  second. Flights take 0.75 s instead of 0.45 s so the ride can be seen; very short moves get no taxi,
+  and dragging the map cancels it. Turn it off in the view settings (`V`): **Такси при летање до мапа**.
 - **Secret:** type `T` `A` `X` `I` (none of these letters does anything else), or tap the logo inside the
   About dialog 5 times: the map spins once and honks (a synthesised two-tone horn, only ever on that
   action). It is left out of the in-app **Контроли** list on purpose.
@@ -242,6 +248,8 @@ The layers button (`V`) opens settings that are remembered in the browser:
 Both sliders snap onto their default when you drag close to it (within ±0.04), and a small mark
 under each slider shows where the default is.
 - **Show sheet labels**: name badges on the sheets, shown while you're zoomed out.
+- **Taxi on flights** (**Такси при летање до мапа**): on by default; the little taxi that drives along
+  flights to a sheet (see [Extras](#extras)).
 - **Show sheet numbers**: off by default. Turns on the sheet numbers everywhere: in the labels on the map
   (`11 · Козле`), in the list, on the sheet card and in the full-screen viewer.
 - **Edit layout**: see below.
@@ -334,7 +342,7 @@ layout.js      where each sheet sits: lat, lon, width (m), rot (°), z (stacking
 layout.claude.js  snapshot of the automatic alignment, used by the Restore buttons
 layout.before-claude.js  your layout just before the automatic alignment
 server.py      local server: serves the folder and saves layout.js (POST /api/layout)
-fun.js         the playful extras: Каде, шефе?, taximeter, guessing game, secret code (uses window.LudoTaxi from app.js)
+fun.js         the playful extras: Каде, шефе?, the taxi on flights, taximeter, guessing game, secret code (uses window.LudoTaxi from app.js)
 tools/         alignment helpers: grid.html, osm_lookup.py, scan_area.py, add_points.py, fit.py,
                control_points.json (every matched junction, sheet by sheet)
 make_zip.py    rebuilds sheets/all-originals.zip from input/
