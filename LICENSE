@@ -1,0 +1,18 @@
+Лудо Такси · мапи на Скопје
+Copyright © 2026 Бојан Божиновски (Bojan Bozinovski). All rights reserved.
+
+This covers the website and game: the source code (app.js, fun.js, index.html, style.css,
+build.py, server.py, make_zip.py, the tools/ folder), the sheet layout (layout*.js), the logo and
+icon, the texts, and the games and extras built on top of the maps (Каде, шефе?, the taximeter,
+Погоди ја населбата, night shift and the rest).
+
+The repository is public so the site can be served with GitHub Pages and so people can read the
+code. That does not grant a licence: copying, modifying, redistributing or reusing the code, the
+design or the game, in whole or in part, needs written permission from the author.
+Contact: https://www.linkedin.com/in/bojanb/
+
+The hand-drawn maps (the scans in input/ and sheets/) are the work of the Skopje taxi driver who
+signed them „МБ“ and remain theirs; they are not covered by the copyright above.
+
+The street map comes from OpenStreetMap, © OpenStreetMap contributors, available under the
+Open Database License (https://www.openstreetmap.org/copyright).

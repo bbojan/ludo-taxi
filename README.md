@@ -467,6 +467,14 @@ Then rebuild the download-all ZIP, and add an entry for the new sheet in `layout
 python3 make_zip.py
 ```
 
+## Copyright
+
+© 2026 Бојан Божиновски. All rights reserved. The website and the game (code, layout, logo, texts and
+the extras such as Каде, шефе?, the taximeter and Погоди ја населбата) may not be copied, modified or
+reused without written permission; the repository is public only so GitHub Pages can serve it. The
+hand-drawn maps remain the work of their author, the taxi driver „МБ“, and the street map is
+© OpenStreetMap contributors. See [LICENSE](LICENSE).
+
 ## Credits
 
 - Hand-drawn maps: a Skopje taxi driver (signed "МБ"), last millennium.
