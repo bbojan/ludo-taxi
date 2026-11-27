@@ -131,6 +131,7 @@
   <section class="scores" aria-labelledby="scoresTitle">
     <h3 id="scoresTitle">Игра „Погоди“</h3>
     <p id="scoresText">Уште немаш одиграно.</p>
+    <label class="timer-set"><input type="checkbox" id="timerToggle"> Тајмер: 60 секунди по рунда</label>
     <div class="row split">
       <button id="scoresPlay" class="text primary">Играј</button>
       <button id="scoresClear" class="text">Избриши</button>
@@ -176,6 +177,7 @@
       <dt>Сметка од таксиметарот</dt><dd><kbd>M</kbd></dd>
       <dt>Ноќна смена</dt><dd><kbd>Z</kbd></dd>
       <dt>Игра „Погоди“ / крај на играта</dt><dd><kbd>P</kbd> / <kbd>Esc</kbd></dd>
+      <dt>Во играта: потврди ја иглата</dt><dd><kbd>Enter</kbd></dd>
       <dt>Назад, па затвори</dt><dd><kbd>Esc</kbd></dd>
       <dt>Затвори го овој прозорец</dt><dd><kbd>Esc</kbd></dd>
     </dl>
@@ -210,10 +212,15 @@
 
 <div id="gamePanel" class="game hidden" role="region" aria-labelledby="gameTitle">
   <div class="card-head"><strong id="gameTitle">Погоди ја населбата</strong>
+    <span id="gameTimer" class="timer" hidden></span>
     <button class="close" id="gameClose" aria-label="Затвори ја играта">×</button></div>
   <canvas id="gameCrop" aria-label="Парче од цртежот"></canvas>
+  <ol id="gameSummary" class="summary" hidden></ol>
   <p id="gameText"></p>
-  <button id="gameNext" class="text primary">Прескокни</button>
+  <div class="row split">
+    <button id="gameShare" class="text" hidden>Предизвикај пријател</button>
+    <button id="gameNext" class="text">Прескокни</button>
+  </div>
 </div>
 
 <dialog id="receiptDialog" class="receipt" aria-label="Сметка">

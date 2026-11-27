@@ -153,9 +153,20 @@
     $('scoresClear').classList.remove('confirm');
     $('scoresClear').textContent = 'Избриши';
   }
-  let game = null;                                       // { round, total, state: 'guess'|'result'|'over', target, guess, sheet, prevBase }
+  let game = null;          // { seed, rnd, rounds: [...], round, total, state: 'guess'|'result'|'over', pending, challenge, timer }
   const panel = $('gamePanel');
   const cropCanvas = $('gameCrop');
+  const TIMER_KEY = 'taxi-maps-guess-timer', ROUND_SECONDS = 60;
+
+  // Every game comes from a seed, so the same five pieces can be sent to a friend (?pogodi=<seed>).
+  const newSeed = () => Math.random().toString(36).slice(2, 8);
+  function seededRandom(seed) {                          // mulberry32 on a hash of the seed text
+    let h = 1779033703;
+    for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 3432918353), h = h << 13 | h >>> 19;
+    let a = h >>> 0;
+    return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  const byIdOrder = [...sheets].sort((a, b) => a.id < b.id ? -1 : 1);   // same order for everyone
 
   function drawCrop(s, u, v) {
     const g = T.sheetGeom(s);
@@ -177,15 +188,19 @@
     const full = s.full && s.full.complete && s.full.naturalWidth ? s.full : new Image();
     if (full !== s.full) { full.src = `sheets/${s.id}.jpg`; s.full = full; }
     if (full.complete && full.naturalWidth) paint(full);
-    else full.addEventListener('load', () => { if (game && game.sheet === s) paint(full); }, { once: true });
+    else full.addEventListener('load', () => { if (game && game.rounds[game.round - 1]?.sheet === s) paint(full); }, { once: true });
   }
 
-  function startGame() {
+  function startGame(opts = {}) {
     if (T.viewerOpen) return;
-    if (game) { endGame(); return; }
-    game = { round: 0, total: 0, prevBase: T.prefs.base };
+    if (game) { endGame(); if (!opts.seed) return; }
+    const seed = opts.seed || newSeed();
+    const timer = opts.timer ?? (localStorage.getItem(TIMER_KEY) === '1' ? ROUND_SECONDS : 0);
+    game = { seed, rnd: seededRandom(seed), rounds: [], round: 0, total: 0, prevBase: T.prefs.base,
+      challenge: opts.challenge ?? null, timer, pending: null };
     T.prefs.base = true;                                 // the game needs the street map
     T.closePanels();
+    T.$('aboutDialog').open && T.$('aboutDialog').close();
     panel.classList.remove('hidden');
     document.body.classList.add('game-on');
     nextRound();
@@ -193,45 +208,85 @@
   function nextRound() {
     game.round++;
     game.state = 'guess';
-    game.guess = null;
+    game.pending = null;
     T.select(null);
     fun.hideSheets = true;
-    const s = game.sheet = pickOne(sheets);
-    const u = 0.25 + Math.random() * 0.5, v = 0.25 + Math.random() * 0.5;
+    const r = game.rnd;
+    const s = byIdOrder[Math.floor(r() * byIdOrder.length)];
+    const u = 0.25 + r() * 0.5, v = 0.25 + r() * 0.5;
     const g = T.sheetGeom(s), lx = (u - 0.5) * g.w, ly = (v - 0.5) * g.h;
-    game.target = [g.x + lx * Math.cos(g.r) - ly * Math.sin(g.r), g.y + lx * Math.sin(g.r) + ly * Math.cos(g.r)];
+    const target = [g.x + lx * Math.cos(g.r) - ly * Math.sin(g.r), g.y + lx * Math.sin(g.r) + ly * Math.cos(g.r)];
+    game.rounds.push({ sheet: s, target, guess: null, m: null, pts: 0 });
+    cropCanvas.hidden = false;
+    $('gameSummary').hidden = true;
+    $('gameShare').hidden = true;
     drawCrop(s, u, v);
-    $('gameTitle').textContent = `Погоди ја населбата · ${game.round}/${ROUNDS}`;
-    $('gameText').textContent = 'Каде е ова парче од цртежот? Допри го местото на картата.';
-    $('gameNext').textContent = 'Прескокни';
+    $('gameTitle').textContent = `${game.challenge ? 'Предизвик' : 'Погоди ја населбата'} · ${game.round}/${ROUNDS}`;
+    $('gameText').textContent = 'Каде е ова парче од цртежот? Допри на картата за да ставиш игла (можеш да ја поместиш), па „Погоди!“.';
+    syncGuessButton();
+    startTimer();
     T.animateTo(T.fitAll());
     T.requestRender();
   }
+  function syncGuessButton() {
+    const b = $('gameNext');
+    b.textContent = game.pending ? 'Погоди!' : 'Прескокни';
+    b.classList.toggle('primary', !!game.pending);
+  }
+
+  // Optional round timer: when it runs out, a placed pin counts; without one the round scores 0.
+  let timerId = 0;
+  function startTimer() {
+    clearInterval(timerId);
+    const el = $('gameTimer');
+    if (!game.timer) { el.hidden = true; return; }
+    const ends = performance.now() + game.timer * 1000;
+    const tick = () => {
+      if (!game || game.state !== 'guess') { clearInterval(timerId); el.hidden = true; return; }
+      const left = Math.max(0, Math.ceil((ends - performance.now()) / 1000));
+      el.hidden = false;
+      el.textContent = `⏱ ${left}`;
+      el.classList.toggle('low', left <= 10);
+      if (left <= 0) { clearInterval(timerId); reveal(game.pending); }
+    };
+    tick();
+    timerId = setInterval(tick, 250);
+  }
+
   function score(m) { return Math.round(1000 * Math.exp(-m / 800)); }
   function fmtDist(m) { return m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1)} km`; }
+  const distM = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) * T.metersPerUnit(T.yToLat(b[1]));
 
-  function reveal(guess) {
-    const [tx, ty] = game.target;
-    const m = guess ? Math.hypot(guess[0] - tx, guess[1] - ty) * T.metersPerUnit(T.yToLat(ty)) : Infinity;
-    const pts = guess ? score(m) : 0;
-    game.total += pts;
-    game.guess = guess;
-    game.state = 'result';
-    fun.hideSheets = false;
-    T.select(game.sheet);
-    const name = game.sheet.name;
-    $('gameText').textContent = guess
-      ? `${name}: промаши за ${fmtDist(m)} → ${pts} поени.` + (m < 150 ? ' Право на адреса! 🎯' : m < 600 ? ' Блиску!' : '')
-      : `Тоа беше ${name}. 0 поени.`;
-    $('gameNext').textContent = game.round < ROUNDS ? 'Следна' : 'Резултат';
-    // show both points
-    const xs = [tx, guess?.[0] ?? tx], ys = [ty, guess?.[1] ?? ty];
-    const g = T.sheetGeom(game.sheet);
-    const w = Math.max(Math.max(...xs) - Math.min(...xs), g.w), h = Math.max(Math.max(...ys) - Math.min(...ys), g.h);
+  function fitPoints(pts, minW = 0, minH = 0) {
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const w = Math.max(Math.max(...xs) - Math.min(...xs), minW, 1), h = Math.max(Math.max(...ys) - Math.min(...ys), minH, 1);
     const vw = window.innerWidth, vh = window.innerHeight;
     T.animateTo({ cx: (Math.min(...xs) + Math.max(...xs)) / 2, cy: (Math.min(...ys) + Math.max(...ys)) / 2,
-      scale: Math.min((vw - 60) / w, (vh - 320) / h), rot: 0 });
+      scale: Math.min((vw - 80) / w, (vh - 360) / h), rot: 0 });
   }
+
+  function reveal(guess) {
+    clearInterval(timerId);
+    $('gameTimer').hidden = true;
+    const rd = game.rounds[game.round - 1];
+    rd.guess = guess || null;
+    rd.m = guess ? distM(guess, rd.target) : null;
+    rd.pts = guess ? score(rd.m) : 0;
+    game.total += rd.pts;
+    game.pending = null;
+    game.state = 'result';
+    fun.hideSheets = false;
+    T.select(rd.sheet);
+    const name = rd.sheet.name;
+    $('gameText').textContent = guess
+      ? `${name}: промаши за ${fmtDist(rd.m)} → ${rd.pts} поени.` + (rd.m < 150 ? ' Право на адреса! 🎯' : rd.m < 600 ? ' Блиску!' : '')
+      : `Тоа беше ${name}. 0 поени.`;
+    $('gameNext').textContent = game.round < ROUNDS ? 'Следна' : 'Резултат';
+    $('gameNext').classList.add('primary');
+    const g = T.sheetGeom(rd.sheet);
+    fitPoints(guess ? [rd.target, guess] : [rd.target], g.w, g.h);
+  }
+
   function gameOver() {
     game.state = 'over';
     fun.hideSheets = false;
@@ -240,19 +295,35 @@
     if (game.total > st.best) { st.best = game.total; st.bestDate = Date.now(); }
     localStorage.setItem(STATS_KEY, JSON.stringify(st));
     showStats();
-    const best = st.best;
     const max = ROUNDS * 1000, t = game.total;
     const verdict = t >= max * 0.8 ? 'Вистински таксист! 🚕' : t >= max * 0.5 ? 'Добро ги знаеш маалата.'
       : t >= max * 0.2 ? 'Уште малку возење и ќе ги знаеш.' : 'Следниот пат земи такси 😄';
     $('gameTitle').textContent = `Резултат: ${t} / ${max}`;
-    $('gameText').textContent = `${verdict} Најдобар резултат: ${best}.`;
+    let text = `${verdict} Најдобар резултат: ${st.best}.`;
+    if (game.challenge != null) {
+      const c = game.challenge;
+      text = (t > c ? `Го победи предизвикот (${c})! 🏆 ` : t === c ? `Нерешено со предизвикот (${c}). ` : `Предизвикот (${c}) остана непобеден. `) + text;
+    }
+    $('gameText').textContent = text;
+    // the five rounds as a list; the map shows all of them (numbered pins)
+    const list = $('gameSummary');
+    list.replaceChildren(...game.rounds.map((rd, i) => {
+      const li = mk('li');
+      li.append(mk('span', 'n', String(i + 1)), mk('span', 'nm', rd.sheet.name),
+        mk('span', 'd', rd.guess ? fmtDist(rd.m) : '—'), mk('span', 'p', String(rd.pts)));
+      return li;
+    }));
+    list.hidden = false;
+    cropCanvas.hidden = true;
+    $('gameShare').hidden = false;
     $('gameNext').textContent = 'Играј пак';
-    cropCanvas.getContext('2d').clearRect(0, 0, cropCanvas.width, cropCanvas.height);
     T.select(null);
-    T.animateTo(T.fitAll());
+    fitPoints(game.rounds.flatMap(rd => rd.guess ? [rd.target, rd.guess] : [rd.target]));
   }
   function endGame() {
     if (!game) return;
+    clearInterval(timerId);
+    $('gameTimer').hidden = true;
     T.prefs.base = game.prevBase;
     game = null;
     fun.hideSheets = false;
@@ -260,39 +331,84 @@
     document.body.classList.remove('game-on');
     T.requestRender();
   }
+
+  // Challenge a friend: a link with the same seed (same five pieces), the timer and your score.
+  function challengeLink() {
+    const u = new URL(location.href);
+    u.hash = '';
+    for (const k of [...u.searchParams.keys()]) u.searchParams.delete(k);
+    u.searchParams.set('pogodi', game.seed);
+    u.searchParams.set('rez', String(game.total));
+    if (game.timer) u.searchParams.set('t', String(game.timer));
+    return u.toString();
+  }
+  $('gameShare').onclick = async () => {
+    if (!game) return;
+    const url = challengeLink(), title = `Лудо Такси: погоди ја населбата. Мој резултат: ${game.total}. Можеш подобро?`;
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ title, text: title, url }); } catch { /* cancelled */ }
+      return;
+    }
+    try { await navigator.clipboard.writeText(url); T.toast('Линкот за предизвик е копиран'); }
+    catch { prompt('Копирај го линкот:', url); }
+  };
+  // Opening a challenge link starts that game straight away (and tidies the address)
+  {
+    const q = new URLSearchParams(location.search), seed = q.get('pogodi');
+    if (seed && /^[a-z0-9]{1,16}$/i.test(seed)) {
+      const rez = q.get('rez'), t = +q.get('t') || 0;
+      for (const k of ['pogodi', 'rez', 't']) q.delete(k);
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+      setTimeout(() => startGame({ seed, challenge: rez != null && /^\d+$/.test(rez) ? +rez : null, timer: t > 0 ? Math.min(t, 600) : 0 }), 300);
+    }
+  }
+
   $('gameNext').onclick = () => {
     if (!game) return;
-    if (game.state === 'guess') reveal(null);
+    if (game.state === 'guess') reveal(game.pending);   // „Погоди!“ with a pin, „Прескокни“ without
     else if (game.state === 'result') { if (game.round < ROUNDS) nextRound(); else gameOver(); }
     else { endGame(); startGame(); }
   };
   $('gameClose').onclick = endGame;
-  fun.actions.game = startGame;
+  fun.actions.game = () => startGame();
   fun.actions.escape = () => { if (!game) return false; endGame(); return true; };
+  fun.actions.enter = () => { if (!game) return false; $('gameNext').click(); return true; };
   fun.onTap = (x, y) => {
-    if (!game || game.state !== 'guess') return !!game && game.state === 'over';
-    reveal(T.screenToWorld(x, y));
+    if (!game || game.state !== 'guess') return false;  // after a round the map can be explored
+    game.pending = T.screenToWorld(x, y);              // place or move the pin; „Погоди!“ confirms
+    syncGuessButton();
+    T.requestRender();
     return true;
   };
-  // pins: where you tapped (dark) and where it really is (red), joined by a dashed line
+
+  // Pins: the pin you placed (dark), where it really is (red), a dashed line between; numbered at the end
   fun.afterRender.push(ctx => {
-    if (!game || game.state !== 'result') return;
-    const [tx, ty] = T.worldToScreen(...game.target);
+    if (!game) return;
     ctx.save();
-    if (game.guess) {
-      const [gx, gy] = T.worldToScreen(...game.guess);
-      ctx.setLineDash([6, 5]); ctx.lineWidth = 2; ctx.strokeStyle = '#2a2622';
-      ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]);
-      pin(ctx, gx, gy, '#2a2622');
-    }
-    pin(ctx, tx, ty, '#c8372d');
+    if (game.state === 'guess' && game.pending) pin(ctx, ...T.worldToScreen(...game.pending), '#2a2622');
+    const shown = game.state === 'result' ? [game.rounds[game.round - 1]] : game.state === 'over' ? game.rounds : [];
+    shown.forEach(rd => {
+      const [tx, ty] = T.worldToScreen(...rd.target);
+      if (rd.guess) {
+        const [gx, gy] = T.worldToScreen(...rd.guess);
+        ctx.setLineDash([6, 5]); ctx.lineWidth = 2; ctx.strokeStyle = T.night ? '#f2c66d' : '#2a2622';
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]);
+        pin(ctx, gx, gy, '#2a2622');
+      }
+      pin(ctx, tx, ty, '#c8372d', game.state === 'over' ? String(game.rounds.indexOf(rd) + 1) : '');
+    });
     ctx.restore();
   });
-  function pin(ctx, x, y, color) {
-    ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2);
+  function pin(ctx, x, y, color, label = '') {
+    ctx.beginPath(); ctx.arc(x, y, label ? 11 : 9, 0, Math.PI * 2);
     ctx.fillStyle = color; ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+    if (label) { ctx.fillStyle = '#fff'; ctx.font = '700 12px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + 0.5); }
   }
+
+  // Timer setting (About dialog)
+  $('timerToggle').checked = localStorage.getItem(TIMER_KEY) === '1';
+  $('timerToggle').onchange = e => localStorage.setItem(TIMER_KEY, e.target.checked ? '1' : '0');
 
   // About dialog: play from there, or clear the scores (second click confirms)
   $('scoresPlay').onclick = () => { $('aboutDialog').close(); if (!game) startGame(); };
@@ -315,6 +431,7 @@
   // the camera follows it, with a slight swerve, then it parks with a bounce and a puff and fades away.
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;   // same easing as the map flight
   const PARK_MS = 900, FADE_MS = 300;
+  const TAXI_SIZE = 2;                                   // drawn at 2× the 46 × 30 px outline below
   let trip = null;
   fun.onFlight = a => {
     if (!a || !T.prefs.taxi || game) { trip = null; return; }
@@ -341,7 +458,7 @@
     const parked = Math.max(0, now - a.t0 - a.ms);
     if (parked > PARK_MS + FADE_MS) { trip = null; T.requestRender(); return; }
     const alpha = parked > PARK_MS ? 1 - (parked - PARK_MS) / FADE_MS : Math.min(1, t * 6);
-    const bounce = parked > 0 && parked < 400 ? Math.sin(parked / 400 * Math.PI * 2) * 2.5 * (1 - parked / 400) : 0;
+    const bounce = parked > 0 && parked < 400 ? Math.sin(parked / 400 * Math.PI * 2) * 2.5 * TAXI_SIZE * (1 - parked / 400) : 0;
     drawTaxi(ctx, x, y - bounce, trip.heading, alpha, t < 1 ? now : 0, parked);
     T.requestRender();
   });
@@ -354,6 +471,7 @@
     ctx.globalAlpha = Math.max(0, alpha);
     ctx.translate(x, y);
     ctx.rotate(tilt);
+    ctx.scale(TAXI_SIZE, TAXI_SIZE);
     if (left) ctx.scale(-1, 1);
     const ink = '#2a2622';
     if (T.night) {                                        // headlight beam
@@ -396,5 +514,5 @@
   }
 
   $('rideBtn').onclick = ride;
-  $('gameBtn').onclick = startGame;
+  $('gameBtn').onclick = () => startGame();
 })();

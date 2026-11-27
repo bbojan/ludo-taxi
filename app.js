@@ -636,6 +636,7 @@
     else if (c === 'KeyE' || c === 'BracketRight') rotateBy(Math.PI / 24);
     else if (k === '.' || k === '>' || k === 'PageDown') { e.preventDefault(); stepSelection(1); }
     else if (k === ',' || k === '<' || k === 'PageUp') { e.preventDefault(); stepSelection(-1); }
+    else if (k === 'Enter' && !e.target.closest?.('button, a, [tabindex]') && fun.actions.enter?.()) { /* game: Погоди! / Следна */ }
     else if ((k === 'Enter' || k === ' ') && !e.target.closest?.('button, a, [tabindex]')) {
       // Enter / Space: with nothing selected, select sheet 1; otherwise "На карта", and again "Назад"
       e.preventDefault();

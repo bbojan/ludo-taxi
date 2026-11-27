@@ -84,6 +84,7 @@ The creator-only **Edit layout** controls are described in [Aligning the sheets]
 | Random ride (**Каде, шефе?**) | `K` | Yellow button under the logo | Yellow button under the logo |
 | Taximeter receipt | `M` | Click the taximeter | Tap the taximeter |
 | Guessing game (**Погоди**) / end it | `P` / `Esc` | **Погоди** button / × | **Погоди** button / × |
+| Game: place / move the pin, then confirm | `Enter` confirms | Click the map, then **Погоди!** | Tap the map, then **Погоди!** |
 | About | `?` (opens it with **Контроли** expanded); or Tab to the logo, then Enter or Space | Click the logo | Tap the logo |
 | Pick a sheet from the list | Tab to its row, then Enter or Space | Click the row | Tap the row |
 
@@ -155,16 +156,28 @@ Under the logo, a little left column has three playful extras (all in `fun.js`):
   flying, rides) and the fare on a made-up "Лудо" tariff: 40 ден start, 35 ден/km, +20 % at night
   (22:00–06:00, shown with ☾). Click it (or `M`) for a printed-style receipt listing the neighbourhoods
   visited; **Плати и ресетирај** (pay and reset) sets it back to zero. It resets on reload.
-- **Погоди ја населбата** ("Guess the neighbourhood", `P`): five rounds. The drawings disappear and a
-  piece of one drawing is shown (turned the way it lies on the map); tap where it is on the bare street
-  map. Up to 1000 points a round, depending on how close you were (`1000 × e^(−metres / 800)`); then the
-  sheet appears with a red pin where the piece really is, a dark pin where you tapped, and a dashed line
-  between them. **Прескокни** skips a round. × or `Esc` ends the game; the street map is switched on for it
-  and set back afterwards. The About dialog has an **Игра „Погоди“** section with the best score (and
-  its date), the number of games and the last score, a **Играј** button, and **Избриши**, which clears them
-  after a second confirming click (**Сигурно? Избриши**). Scores are kept only in this browser
-  (`localStorage` key `taxi-maps-guess`).
-- **The little taxi:** whenever the map flies to or from a sheet (**Show on map** / **Back**, next / previous,
+- **Погоди ја населбата** ("Guess the neighbourhood", `P`): five rounds, like GeoGuessr on Skopje's
+  street map. The drawings disappear and a piece of one drawing is shown (turned the way it lies on the
+  map).
+  - **Place, then confirm:** tap the map to drop a pin, tap again to move it, then **Погоди!** (or `Enter`)
+    confirms. **Прескокни** (shown while no pin is placed) skips the round for 0 points.
+  - **Score:** up to 1000 points a round, depending on the distance (`1000 × e^(−metres / 800)`). The sheet
+    then appears with a red pin where the piece really is, a dark pin where you guessed and a dashed line
+    between them.
+  - **Summary:** after round 5 the map shows all five rounds (numbered red pins, your pins, lines) and the
+    panel lists each round's neighbourhood, distance and points, with the total and a verdict.
+  - **Timer (optional):** **Тајмер: 60 секунди по рунда** in the About dialog's game section (off by
+    default, remembered). When time runs out a placed pin counts; without one the round scores 0.
+  - **Challenge a friend:** **Предизвикај пријател** on the summary shares (phone) or copies (computer) a
+    link such as `…/?pogodi=k3x9qa&rez=3120&t=60`. Every game is built from a seed, so the link gives your
+    friend the same five pieces, with your timer setting; at the end they see whether they beat your score.
+    Opening the link starts the challenge at once and tidies the address.
+  - × or `Esc` ends the game; the street map is switched on for it and set back afterwards.
+  - The About dialog's **Игра „Погоди“** section shows the best score (and its date), the number of games
+    and the last score, with **Играј** and **Избриши** (a second, confirming click clears them). Scores and
+    the timer setting are kept only in this browser (`localStorage` keys `taxi-maps-guess` and
+    `taxi-maps-guess-timer`).
+- **The little taxi:** (drawn at twice the logo-taxi outline size) whenever the map flies to or from a sheet (**Show on map** / **Back**, next / previous,
   **Каде, шефе?**, opening a link), a small yellow taxi like the one in the logo drives along the flight:
   the camera follows it with a slight swerve, it faces the way it's going (wheels turning, headlight beam
   at night), then parks on the sheet with a bounce and a puff of exhaust and fades out after about a
