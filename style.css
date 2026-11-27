@@ -13,7 +13,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--paper)
 canvas#map { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
 canvas#map.dragging { cursor: grabbing; }
 
-.title { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 14px; pointer-events: none;
+/* top-left column: the title badge, then the fun buttons and the taximeter */
+.left-col { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 14px; display: flex; flex-direction: column;
+  align-items: stretch; gap: 8px; pointer-events: none; z-index: 1; }
+.left-col > * { pointer-events: auto; }
+.title { pointer-events: none;
   background: var(--panel); padding: 8px 14px; border-radius: 12px; box-shadow: var(--shadow); }
 .title { text-align: center; }
 .title h1 { margin: 0; font-size: 17px; letter-spacing: .01em; }
@@ -161,7 +165,13 @@ body.card-open .attribution { display: none; }
   background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .about a.link:hover { background: #000; }
 .about .help { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); text-align: left; }
-.about .more h3 { text-align: center; }
+.about .more h3, .about .scores h3 { text-align: center; }
+.about .scores { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.about .scores h3 { margin: 0 0 6px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.about .scores p { margin: 0 0 8px; font-size: 13px; line-height: 1.5; }
+.about .scores strong { font-size: 18px; }
+.about .scores .row { margin: 0; }
+#scoresClear.confirm { border-color: var(--accent); color: var(--accent); }
 /* "Контроли": collapsed by default, opens with a click (or Enter / Space when focused) */
 .about .help summary { list-style: none; cursor: pointer; text-align: center; padding: 2px 0; font-size: 11px; font-weight: 600;
   color: var(--muted); text-transform: uppercase; letter-spacing: .06em; border-radius: 6px; }
@@ -191,3 +201,44 @@ body.card-open .attribution { display: none; }
 .about .more img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; margin: 0;
   border-bottom: 1px solid var(--line); }
 .about .more span { display: block; padding: 6px 8px 7px; font-size: 13px; font-weight: 600; }
+
+/* ---------- fun.js: „Каде, шефе?“, taximeter, guessing game, receipt ---------- */
+.fun-bar { display: flex; gap: 6px; }
+.fun-bar button { flex: 1 1 0; min-width: 0; border-radius: 10px; padding: 7px 8px; font: 700 13px/1.2 system-ui, -apple-system, sans-serif;
+  cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
+.roof { border: 2px solid #2a2622; background: #f7c600; color: #2a2622; letter-spacing: .02em; }   /* taxi roof sign */
+.roof:hover { background: #ffd51f; }
+.roof:active, .fun-btn:active { transform: scale(.96); }
+.fun-btn { border: 0; background: var(--panel); color: var(--ink); }
+.fun-btn:hover { background: #fff; }
+.meter { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border: 0; border-radius: 10px;
+  padding: 6px 10px; background: #1d1b18; color: #ff5a3c; font: 700 15px/1.1 ui-monospace, 'SF Mono', Menlo, monospace;
+  box-shadow: var(--shadow); cursor: pointer; text-shadow: 0 0 6px rgba(255,90,60,.55); }
+.meter .km { color: #9fe870; text-shadow: 0 0 6px rgba(159,232,112,.5); }
+.meter.night .fare::after { content: ' ☾'; }
+.meter:hover { background: #000; }
+.fun-bar button:focus-visible, .meter:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+body.game-on .fun-bar, body.game-on .meter, body.game-on #sheetCard { display: none; }
+
+.game { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 5;
+  width: min(300px, calc(100vw - 28px)); background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px; }
+.game canvas { display: block; width: 100%; height: 160px; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); background: #fffdf6; }
+.game p { margin: 8px 0; font-size: 13px; line-height: 1.4; }
+.game #gameNext { width: 100%; }
+
+.receipt { border: 0; border-radius: 6px; padding: 18px 18px 14px; width: min(300px, calc(100vw - 32px)); background: #fffef9;
+  box-shadow: var(--shadow); color: #222; font: 13px/1.5 ui-monospace, 'SF Mono', Menlo, monospace; }
+.receipt::backdrop { background: rgba(30, 20, 10, .35); }
+.receipt .r-head { margin: 0; text-align: center; font-weight: 700; letter-spacing: .08em; }
+.receipt .r-sub { margin: 0 0 10px; text-align: center; font-size: 11px; color: #666; border-bottom: 1px dashed #999; padding-bottom: 8px; }
+.receipt .r-row { display: flex; justify-content: space-between; gap: 10px; }
+.receipt .r-total { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #999; font-weight: 700; font-size: 15px; }
+.receipt .r-note { margin: 10px 0 0; font-size: 11px; color: #555; }
+.receipt .r-thanks { margin: 8px 0 12px; text-align: center; font-size: 11px; }
+.receipt .row.split { display: flex; gap: 8px; font-family: system-ui, -apple-system, sans-serif; }
+
+@media (max-width: 640px) {
+  .fun-bar { flex-direction: column; }
+  .fun-bar button { font-size: 12px; padding: 6px; }
+  .meter { font-size: 13px; padding: 5px 8px; }
+}

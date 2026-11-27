@@ -41,7 +41,7 @@ The published site is plain static files. Build it with:
 python3 build.py
 ```
 
-This writes `dist/` (gitignored) with only what the page loads: `index.html`, `style.css`, `app.js`,
+This writes `dist/` (gitignored) with only what the page loads: `index.html`, `style.css`, `app.js`, `fun.js`,
 `layout.js`, `layout.claude.js`, the two SVGs, `projects/` (thumbnails for the About dialog) and `sheets/` (including `all-originals.zip`, which it
 creates with `make_zip.py` if missing). The CSS and script links in `dist/index.html` get a `?v=<hash>`
 so visitors get the new files after a deploy. Preview it with
@@ -80,6 +80,9 @@ The creator-only **Edit layout** controls are described in [Aligning the sheets]
 | Download one sheet | `D` (the selected sheet) | Card button; ↓ in the list | Card button; ↓ in the list |
 | Download all 26 | — | Red button at the top of the list | Red button at the top of the list |
 | Share a link to the sheet | `S` (copies the link) | 🔗 on the card (copies the link) | 🔗 on the card (opens the share menu) |
+| Random ride (**Каде, шефе?**) | `K` | Yellow button under the logo | Yellow button under the logo |
+| Taximeter receipt | `M` | Click the taximeter | Tap the taximeter |
+| Guessing game (**Погоди**) / end it | `P` / `Esc` | **Погоди** button / × | **Погоди** button / × |
 | About | `?` (opens it with **Контроли** expanded); or Tab to the logo, then Enter or Space | Click the logo | Tap the logo |
 | Pick a sheet from the list | Tab to its row, then Enter or Space | Click the row | Tap the row |
 
@@ -119,6 +122,30 @@ take the swipe first.
 
 The compass needle shows where north is while the map is rotated.
 
+### Extras
+
+Under the logo, a little left column has three playful extras (all in `fun.js`):
+
+- **Каде, шефе?** ("Where to, boss?", the yellow taxi-roof button, `K`): a ride to a random neighbourhood.
+  It works like **Show on map**, so **Back** / `Esc` returns, and a taxi-driver line pops up
+  ("Ченто? Може, ама по Партизанска е гужва.").
+- **Taximeter** (the green-and-red display): counts how many kilometres the map has travelled (panning,
+  flying, rides) and the fare on a made-up "Лудо" tariff: 40 ден start, 35 ден/km, +20 % at night
+  (22:00–06:00, shown with ☾). Click it (or `M`) for a printed-style receipt listing the neighbourhoods
+  visited; **Плати и ресетирај** (pay and reset) sets it back to zero. It resets on reload.
+- **Погоди ја населбата** ("Guess the neighbourhood", `P`): five rounds. The drawings disappear and a
+  piece of one drawing is shown (turned the way it lies on the map); tap where it is on the bare street
+  map. Up to 1000 points a round, depending on how close you were (`1000 × e^(−metres / 800)`); then the
+  sheet appears with a red pin where the piece really is, a dark pin where you tapped, and a dashed line
+  between them. **Прескокни** skips a round. × or `Esc` ends the game; the street map is switched on for it
+  and set back afterwards. The About dialog has an **Игра „Погоди“** section with the best score (and
+  its date), the number of games and the last score, a **Играј** button, and **Избриши**, which clears them
+  after a second confirming click (**Сигурно? Избриши**). Scores are kept only in this browser
+  (`localStorage` key `taxi-maps-guess`).
+- **Secret:** type `T` `A` `X` `I` (none of these letters does anything else), or tap the logo inside the
+  About dialog 5 times: the map spins once and honks (a synthesised two-tone horn, only ever on that
+  action). It is left out of the in-app **Контроли** list on purpose.
+
 ### Coverage
 
 Every action has a keyboard, a mouse / trackpad and a touch route. The one deliberate exception: on touch,
@@ -155,7 +182,7 @@ The sheet's number shows in a red badge next to its name only when **Show sheet 
 
 Clicking the logo badge opens a small dialog: развиено од Бојан Божиновски, with LinkedIn and GitHub
 buttons, credits for the hand-drawn maps and OpenStreetMap, cards linking to the author's other
-projects (091 Скопје, Старо Скопје), and at the bottom a collapsible **Контроли** section (closed until clicked) listing every keyboard,
+projects (091 Скопје, Старо Скопје), the guessing game's scores (see [Extras](#extras)), and at the bottom a collapsible **Контроли** section (closed until clicked) listing every keyboard,
 mouse / trackpad and touch control (the same as [Controls](#controls)). Its content scrolls when it does not fit the screen;
 × stays in the corner. `Esc`, × or a click outside closes it, and map keys do nothing while it is open.
 When a control changes, update both this README and the dialog in `index.html`.
@@ -284,6 +311,7 @@ layout.js      where each sheet sits: lat, lon, width (m), rot (°), z (stacking
 layout.claude.js  snapshot of the automatic alignment, used by the Restore buttons
 layout.before-claude.js  your layout just before the automatic alignment
 server.py      local server: serves the folder and saves layout.js (POST /api/layout)
+fun.js         the playful extras: Каде, шефе?, taximeter, guessing game, secret code (uses window.LudoTaxi from app.js)
 tools/         alignment helpers: grid.html, osm_lookup.py, scan_area.py, add_points.py, fit.py,
                control_points.json (every matched junction, sheet by sheet)
 make_zip.py    rebuilds sheets/all-originals.zip from input/

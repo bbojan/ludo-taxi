@@ -36,6 +36,8 @@
   const CREATOR = EDITING_ENABLED && [...new URLSearchParams(location.search).keys()].some(k => k.toLowerCase() === 'edit');   // ?edit, ?Edit, …
   let selected = null;
   let anim = null;
+  // Hooks for the playful extras in fun.js (guessing game, taximeter, secret code)
+  const fun = { hideSheets: false, onTap: null, afterRender: [], actions: {} };
 
   // ---------- Sheets ----------
   function loadLayout() {
@@ -204,7 +206,7 @@
     if (selected) { order.splice(order.indexOf(selected), 1); order.push(selected); }   // selected always on top
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    for (const s of order) {
+    for (const s of fun.hideSheets ? [] : order) {
       const g = sheetGeom(s);
       const rad = Math.hypot(g.w, g.h) / 2;
       if (g.x + rad < b.x0 || g.x - rad > b.x1 || g.y + rad < b.y0 || g.y - rad > b.y1) continue;
@@ -249,7 +251,7 @@
 
     // labels in screen space (always upright)
     labelHits = [];
-    if (prefs.labels) {
+    if (prefs.labels && !fun.hideSheets) {
       ctx.font = '600 13px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -271,6 +273,7 @@
       }
     }
 
+    for (const f of fun.afterRender) f(ctx, now);        // screen-space overlays from fun.js
     document.getElementById('needle').setAttribute('transform', `rotate(${view.rot * 180 / Math.PI} 12 12)`);
     if (anim) requestRender();
   }
@@ -512,6 +515,7 @@
   canvas.addEventListener('contextmenu', e => e.preventDefault());
 
   function handleTap(x, y) {
+    if (fun.onTap && fun.onTap(x, y)) return;          // the guessing game takes the tap
     const s = sheetAt(x, y);
     select(s);
   }
@@ -575,7 +579,7 @@
   // Keyboard
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
-    if (document.getElementById('aboutDialog').open) return;   // the About dialog handles its own keys (Esc closes it)
+    if (document.querySelector('dialog[open]')) return;   // an open dialog (About, receipt) handles its own keys; Esc closes it
     if (viewerSheet) {                                   // keys go to the full-screen viewer while it is open
       const cx = viewer.clientWidth / 2, cy = viewer.clientHeight / 2;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -621,6 +625,10 @@
     else if (c === 'KeyD') { if (selected) $('cardDownload').click(); }                     // download the selected sheet
     else if (c === 'KeyS') { if (selected) $('cardShare').click(); }                        // share / copy its link
     else if (k === '?' || (c === 'Slash' && e.shiftKey)) openAbout(true);                   // help: About with Контроли open
+    else if (c === 'KeyK') fun.actions.ride?.();          // „Каде, шефе?“ random ride
+    else if (c === 'KeyM') fun.actions.receipt?.();       // taximeter receipt
+    else if (c === 'KeyP') fun.actions.game?.();          // „Погоди ја населбата“
+    else if (k === 'Escape' && fun.actions.escape?.()) { /* the guessing game ended */ }
     else if (k === 'Escape' && selected && viewBeforeFocus) $('cardFocus').click();   // "Назад": fly back first
     else if (k === 'Escape') { select(null); closePanels(); }
     else if (k.startsWith('Arrow')) {
@@ -1024,6 +1032,19 @@
 
   // ---------- Start ----------
   window.addEventListener('resize', resize);
+  // ---------- Small API for fun.js ----------
+  function spin(ms = 1400) {                           // one full turn of the map, ending where it started
+    anim = { from: { ...view }, to: { ...view, rot: view.rot + 2 * Math.PI }, t0: performance.now(), ms };
+    requestRender();
+  }
+  window.LudoTaxi = {
+    view, sheets, fun, prefs,
+    get selected() { return selected; }, get editMode() { return editMode; }, get viewerOpen() { return !!viewerSheet; },
+    select, focusSheet, animateTo, spin, fitAll, toast, requestRender, closePanels,
+    worldToScreen, screenToWorld, sheetGeom, metersPerUnit, yToLat, xToLon, $,
+    showOnMap(s) { select(s); $('cardFocus').click(); },
+  };
+
   resize();
   Object.assign(view, fitAll());
   requestRender();

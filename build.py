@@ -19,7 +19,7 @@ import sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, sys.argv[1] if len(sys.argv) > 1 else "dist")
 
-FILES = ["index.html", "style.css", "app.js", "layout.js", "layout.claude.js", "favicon.svg", "logo.svg"]
+FILES = ["index.html", "style.css", "app.js", "fun.js", "layout.js", "layout.claude.js", "favicon.svg", "logo.svg"]
 SHEET = re.compile(r"\d{2}(-s)?\.jpg|all-originals\.zip")
 
 
@@ -50,7 +50,7 @@ def main():
     index = os.path.join(OUT, "index.html")
     with open(index, encoding="utf-8") as f:
         html = f.read()
-    for name in ["style.css", "app.js", "layout.js", "layout.claude.js"]:
+    for name in ["style.css", "app.js", "fun.js", "layout.js", "layout.claude.js"]:
         v = short_hash(os.path.join(ROOT, name))
         html, n = re.subn(rf'(\b(?:src|href)="){re.escape(name)}"', rf'\g<1>{name}?v={v}"', html)
         if n != 1:

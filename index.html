@@ -10,10 +10,19 @@
 <body>
 <canvas id="map"></canvas>
 
+<div class="left-col">
 <header class="title" id="titleBadge" role="button" tabindex="0" aria-haspopup="dialog" title="За Лудо Такси">
   <h1><img class="logo" src="logo.svg" alt="Лудо Такси" width="200" height="115"></h1>
   <p>мапи на Скопје нацртани на рака<br>прилично одамна</p>
 </header>
+<div class="fun-bar">
+  <button id="rideBtn" class="roof" title="Возење до случајна населба (K)">Каде, шефе?</button>
+  <button id="gameBtn" class="fun-btn" title="Игра: погоди ја населбата (P)">🎯 Погоди</button>
+</div>
+<button id="meter" class="meter" title="Таксиметар: колку патувала картата. Клик за сметка (M)">
+  <span class="km">0.0 km</span><span class="fare">40 ден</span>
+</button>
+</div>
 
 <div class="controls" role="toolbar">
   <button id="zoomIn" title="Зумирај (+)" aria-label="Зумирај">+</button>
@@ -127,6 +136,14 @@
       <img src="projects/staro-skopje.jpg" alt="" width="160" height="100" loading="lazy">
       <span>Старо Скопје</span></a>
   </nav>
+  <section class="scores" aria-labelledby="scoresTitle">
+    <h3 id="scoresTitle">Игра „Погоди“</h3>
+    <p id="scoresText">Уште немаш одиграно.</p>
+    <div class="row split">
+      <button id="scoresPlay" class="text primary">Играј</button>
+      <button id="scoresClear" class="text">Избриши</button>
+    </div>
+  </section>
   <details class="help">
     <summary>Контроли</summary>
     <h4>Тастатура</h4>
@@ -145,6 +162,9 @@
       <dt>Сподели / копирај линк</dt><dd><kbd>S</kbd></dd>
       <dt>Овие контроли</dt><dd><kbd>?</kbd></dd>
       <dt>Избери од листата</dt><dd><kbd>Tab</kbd>, па <kbd>Enter</kbd></dd>
+      <dt>„Каде, шефе?“ (случајно возење)</dt><dd><kbd>K</kbd></dd>
+      <dt>Сметка од таксиметарот</dt><dd><kbd>M</kbd></dd>
+      <dt>Игра „Погоди“ / крај на играта</dt><dd><kbd>P</kbd> / <kbd>Esc</kbd></dd>
       <dt>Назад, па затвори</dt><dd><kbd>Esc</kbd></dd>
       <dt>Затвори го овој прозорец</dt><dd><kbd>Esc</kbd></dd>
     </dl>
@@ -161,6 +181,7 @@
       <dt>„На карта“ / „Назад“</dt><dd>Двоен клик на мапата</dd>
       <dt>Следна / претходна мапа</dt><dd>Скролај настрана (десно = следна)</dd>
       <dt>Затвори ја картичката</dt><dd>Клик на празно</dd>
+      <dt>Каде, шефе? · Погоди · таксиметар</dt><dd>Копчињата под логото</dd>
     </dl>
     <h4>Допир</h4>
     <dl>
@@ -170,8 +191,25 @@
       <dt>Избери мапа</dt><dd>Допри ја мапата или ознаката</dd>
       <dt>Следна / претходна мапа</dt><dd>Повлечи настрана со три прста (лево = следна)</dd>
       <dt>Затвори ја картичката</dt><dd>Допри празно</dd>
+      <dt>Каде, шефе? · Погоди · таксиметар</dt><dd>Копчињата под логото</dd>
     </dl>
   </details>
+  </div>
+</dialog>
+
+<div id="gamePanel" class="game hidden" role="region" aria-labelledby="gameTitle">
+  <div class="card-head"><strong id="gameTitle">Погоди ја населбата</strong>
+    <button class="close" id="gameClose" aria-label="Затвори ја играта">×</button></div>
+  <canvas id="gameCrop" aria-label="Парче од цртежот"></canvas>
+  <p id="gameText"></p>
+  <button id="gameNext" class="text primary">Прескокни</button>
+</div>
+
+<dialog id="receiptDialog" class="receipt" aria-label="Сметка">
+  <div class="receipt-body"></div>
+  <div class="row split">
+    <button id="receiptClose" class="text">Затвори</button>
+    <button id="receiptPay" class="text primary">Плати и ресетирај</button>
   </div>
 </dialog>
 
@@ -182,5 +220,6 @@
 <script src="layout.js"></script>
 <script src="layout.claude.js"></script>
 <script src="app.js"></script>
+<script src="fun.js"></script>
 </body>
 </html>
