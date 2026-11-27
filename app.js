@@ -108,7 +108,9 @@
     view.cy = wy - (dx * s + dy * c) / view.scale;
   }
   const MIN_SCALE = 1 / 64, MAX_SCALE = 16;
-  const clampScale = s => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
+  // Zooming out stops at the "whole city" view (set by fitAll for the current window size)
+  let minScale = MIN_SCALE;
+  const clampScale = s => Math.min(MAX_SCALE, Math.max(minScale, s));
 
   // ---------- Base map tiles (OSM) ----------
   const tiles = new Map();
@@ -277,10 +279,18 @@
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
+  // Until the visitor moves the map, a window size change (phone rotation, a pane still opening)
+  // re-fits the whole city instead of keeping a view computed for the old size.
+  let viewTouched = false;
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 3);
     vw = window.innerWidth; vh = window.innerHeight;
     canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
+    if (vw > 0 && vh > 0) {
+      const fit = fitAll();                              // also updates the zoom-out limit
+      if (!viewTouched && !selected) Object.assign(view, fit);
+      else if (view.scale < minScale) view.scale = minScale;
+    }
     requestRender();
   }
 
@@ -310,7 +320,8 @@
       const g = sheetGeom(s), r = Math.hypot(g.w, g.h) / 2;
       x0 = Math.min(x0, g.x - r); x1 = Math.max(x1, g.x + r); y0 = Math.min(y0, g.y - r); y1 = Math.max(y1, g.y + r);
     }
-    const scale = Math.min((vw - 40) / (x1 - x0), (vh - 40) / (y1 - y0));
+    const scale = Math.max(MIN_SCALE, Math.min((vw - 40) / (x1 - x0), (vh - 40) / (y1 - y0)));
+    minScale = scale;                                    // furthest zoom-out = the whole city
     return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, scale: clampScale(scale), rot: 0 };
   }
   function focusSheet(s) {
@@ -390,6 +401,7 @@
   }
 
   canvas.addEventListener('pointerdown', e => {
+    viewTouched = true;
     canvas.setPointerCapture(e.pointerId);
     const [x, y] = pointerPos(e);
     pointers.set(e.pointerId, { x, y, rotateMode: e.button === 2 || (e.pointerType === 'mouse' && e.shiftKey) });
@@ -481,6 +493,7 @@
 
   // ---------- Input: wheel / trackpad ----------
   canvas.addEventListener('wheel', e => {
+    viewTouched = true;
     e.preventDefault();
     const [x, y] = pointerPos(e);
     let dy = e.deltaY, dx = e.deltaX;
