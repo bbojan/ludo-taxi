@@ -575,6 +575,7 @@
   // Keyboard
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
+    if (document.getElementById('aboutDialog').open) return;   // the About dialog handles its own keys (Esc closes it)
     if (viewerSheet) {                                   // keys go to the full-screen viewer while it is open
       const cx = viewer.clientWidth / 2, cy = viewer.clientHeight / 2;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -582,6 +583,8 @@
       else if (e.key === '+' || e.key === '=') zoomViewer(1.5, cx, cy);
       else if (e.key === '-' || e.key === '_') zoomViewer(1 / 1.5, cx, cy);
       else if (e.key === '0' || e.code === 'KeyR') fitViewer();
+      else if (e.code === 'KeyD') $('viewerDownload').click();
+      else if (e.code === 'KeyS') { if (selected !== viewerSheet) select(viewerSheet); $('cardShare').click(); }
       else if (e.key.startsWith('Arrow')) {              // move the scan, like the arrow keys move the map
         e.preventDefault();
         const d = 80;
@@ -615,6 +618,9 @@
       if (!selected) stepSelection(1); else $('cardFocus').click();
     }
     else if (c === 'KeyF') { if (!selected) stepSelection(1); $('cardFull').click(); }   // full screen
+    else if (c === 'KeyD') { if (selected) $('cardDownload').click(); }                     // download the selected sheet
+    else if (c === 'KeyS') { if (selected) $('cardShare').click(); }                        // share / copy its link
+    else if (k === '?' || (c === 'Slash' && e.shiftKey)) openAbout(true);                   // help: About with Контроли open
     else if (k === 'Escape' && selected && viewBeforeFocus) $('cardFocus').click();   // "Назад": fly back first
     else if (k === 'Escape') { select(null); closePanels(); }
     else if (k.startsWith('Arrow')) {
@@ -673,6 +679,8 @@
     dl.addEventListener('click', e => { e.stopPropagation(); downloadOriginal(e, s); });
     li.appendChild(dl);
     li.onclick = () => { select(s); focusSheet(s); if (vw < 700) closePanels(); };
+    li.tabIndex = 0;                                       // Tab reaches each row; Enter / Space picks it
+    li.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.onclick(); } });
     list.appendChild(li);
   }
 
@@ -996,11 +1004,20 @@
 
   // ---------- About dialog: opened from the logo badge ----------
   const about = $('aboutDialog');
-  const openAbout = () => { if (!about.open) about.showModal(); };
+  function openAbout(withHelp = false) {
+    if (!about.open) about.showModal();
+    if (withHelp === true) {                             // "?" key: open Контроли and scroll to it
+      const help = about.querySelector('.help');
+      help.open = true;
+      help.scrollIntoView({ block: 'start' });
+      help.querySelector('summary').focus({ preventScroll: true });
+    }
+  }
   $('titleBadge').addEventListener('click', openAbout);
   $('titleBadge').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAbout(); } });
   $('aboutClose').onclick = () => about.close();
   about.addEventListener('click', e => {                 // click on the dimmed backdrop (outside the box) closes
+    if (e.target !== about) return;                      // a click on the content (or a key-activated one, at 0,0) never closes
     const r = about.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) about.close();
   });

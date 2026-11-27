@@ -15,7 +15,7 @@ Browsers block a page opened straight from disk (`file://`) from loading its ima
 reliably, so serve the folder over HTTP with the included server:
 
 ```bash
-cd ~/projects/taxi-maps-skopje-edition
+cd ~/Desktop/projects/ludo-taxi
 ```
 
 ```bash
@@ -77,10 +77,11 @@ The creator-only **Edit layout** controls are described in [Aligning the sheets]
 | Sheet list (☰) | `L` | ☰ button | ☰ button |
 | View settings | `V` | Layers button | Layers button |
 | Full screen | `F` (with nothing selected: sheet 1) | Card button | Card button |
-| Download one sheet | — | Card button; ↓ in the list | Card button; ↓ in the list |
+| Download one sheet | `D` (the selected sheet) | Card button; ↓ in the list | Card button; ↓ in the list |
 | Download all 26 | — | Red button at the top of the list | Red button at the top of the list |
-| Share a link to the sheet | — | 🔗 on the card (copies the link) | 🔗 on the card (opens the share menu) |
-| About | Tab to the logo, then Enter or Space | Click the logo | Tap the logo |
+| Share a link to the sheet | `S` (copies the link) | 🔗 on the card (copies the link) | 🔗 on the card (opens the share menu) |
+| About | `?` (opens it with **Контроли** expanded); or Tab to the logo, then Enter or Space | Click the logo | Tap the logo |
+| Pick a sheet from the list | Tab to its row, then Enter or Space | Click the row | Tap the row |
 
 While a sheet is shown with **Show on map**, next / previous shows the next sheet the same way, and Back still
 returns to where the map was before. Otherwise the map only moves when the newly selected sheet is off screen.
@@ -94,7 +95,8 @@ returns to where the map was before. Otherwise the map only moves when the newly
 | Zoom in 2.5× at a point, or back to fit | — | Double-click | Double-tap |
 | Fit the whole sheet | `0` or `R` | **Fit** button | **Fit** button |
 | Next / previous sheet | `.` / `,` or Page Down / Page Up | Scroll sideways, as on the map | Swipe sideways with three fingers: left = next |
-| Download | — | Download button | Download button |
+| Download | `D` | Download button | Download button |
+| Share a link to the sheet | `S` | — | — |
 | Close | `Esc` or `F` | × | × |
 
 The map and the sheet card follow along behind the viewer, so after closing it the card shows the last sheet
@@ -117,9 +119,11 @@ take the swipe first.
 
 The compass needle shows where north is while the map is rotated.
 
-### Not covered yet
+### Coverage
 
-- **Keyboard:** no key for download or share.
+Every action has a keyboard, a mouse / trackpad and a touch route. The one deliberate exception: on touch,
+Show on map is only the card button, because double-tap zooms. The same controls are listed in the About
+dialog under **Контроли**; when a control changes, update both.
 
 ### Downloads
 
@@ -133,20 +137,28 @@ Every download is the untouched original scan, byte for byte, under its original
 
 ### Sheet card
 
-Tap a sheet to open its card:
+Tap a sheet to open its card. Its buttons, left to right:
 
+- **Show on map** (`Enter` / `Space`, or double-click the sheet) animates to the sheet and turns the map
+  so the drawing reads straight, with its neighbours around it. The button then reads **Back**: click it
+  (or press `Enter`, `Space` or `Esc`) to animate the map back to exactly where it was.
+- **Full screen** (`F`) opens the original scan over the whole screen, flat and not rotated, at full
+  resolution. Pinch, scroll or double-tap to zoom, drag or arrow keys to move, next / previous sheet as
+  on the map. **Fit** (greyed out until you zoom or move; `0` / `R`) brings the whole sheet back, and ×,
+  `Esc` or `F` closes it.
 - **Download**: see above.
-- **Full screen** opens the original scan over the whole screen, flat and not rotated, at full
-  resolution. Pinch, scroll or double-tap to zoom, drag to move. **Fit** (greyed out until you zoom or move) brings the whole sheet back,
-  and × or `Esc` closes it.
-- **Show on map** animates to the sheet and turns the map so the drawing reads straight, with its
-  neighbours around it. The button then reads **Back**: click it to animate the map back to exactly
-  where it was.
+
+The sheet's number shows in a red badge next to its name only when **Show sheet numbers** is on
+(see [Display panel](#display-panel)). The 🔗 icon shares a link (see below).
 
 ### About
 
 Clicking the logo badge opens a small dialog: развиено од Бојан Божиновски, with LinkedIn and GitHub
-buttons, and credits for the hand-drawn maps and OpenStreetMap.
+buttons, credits for the hand-drawn maps and OpenStreetMap, cards linking to the author's other
+projects (091 Скопје, Старо Скопје), and at the bottom a collapsible **Контроли** section (closed until clicked) listing every keyboard,
+mouse / trackpad and touch control (the same as [Controls](#controls)). Its content scrolls when it does not fit the screen;
+× stays in the corner. `Esc`, × or a click outside closes it, and map keys do nothing while it is open.
+When a control changes, update both this README and the dialog in `index.html`.
 
 The interface is in Macedonian.
 
@@ -163,12 +175,13 @@ Shared links never include `?edit`.
 
 ### List of sheets
 
-The ☰ button lists all 26 sheets with thumbnails. Tap one to fly to it, shown upright, or tap its ↓
-icon to download it.
+The ☰ button (`L`) lists all 26 sheets alphabetically with thumbnails. Tap one to fly to it, shown
+upright, or tap its ↓ icon to download it. The panel's title and × stay at the top while the list
+scrolls. Number badges appear only with **Show sheet numbers** on.
 
 ### Display panel
 
-The layers button opens settings that are remembered in the browser:
+The layers button (`V`) opens settings that are remembered in the browser:
 
 - **Show street map underneath**: turns the OpenStreetMap layer on or off.
 - **Street map strength**: how strongly the street map shows. It is kept muted and mostly grey by
@@ -178,7 +191,9 @@ The layers button opens settings that are remembered in the browser:
 
 Both sliders snap onto their default when you drag close to it (within ±0.04), and a small mark
 under each slider shows where the default is.
-- **Show sheet labels**: number and name badges, shown while you're zoomed out.
+- **Show sheet labels**: name badges on the sheets, shown while you're zoomed out.
+- **Show sheet numbers**: off by default. Turns on the sheet numbers everywhere: in the labels on the map
+  (`11 · Козле`), in the list, on the sheet card and in the full-screen viewer.
 - **Edit layout**: see below.
 
 ## Aligning the sheets
@@ -261,7 +276,7 @@ reference points) are the least certain.
 ```
 logo.svg       the Лудо Такси logo (header badge)
 favicon.svg    browser tab icon (the taxi from the logo)
-index.html     page structure: canvas, buttons, panels, sheet card
+index.html     page structure: canvas, buttons, panels, sheet card, About dialog (incl. its controls list)
 style.css      styling
 app.js         the viewer: rendering, gestures, base map, editing
 layout.js      where each sheet sits: lat, lon, width (m), rot (°), z (stacking order)
@@ -272,6 +287,9 @@ server.py      local server: serves the folder and saves layout.js (POST /api/la
 tools/         alignment helpers: grid.html, osm_lookup.py, scan_area.py, add_points.py, fit.py,
                control_points.json (every matched junction, sheet by sheet)
 make_zip.py    rebuilds sheets/all-originals.zip from input/
+build.py       builds the static site into dist/ (gitignored) for GitHub Pages
+.github/workflows/pages.yml   runs build.py and deploys dist/ to GitHub Pages on every push to main
+projects/      320×200 thumbnails of the other projects, for the About dialog
 sheets/
   NN.jpg       byte-for-byte copies of the originals (used at high zoom and for downloads)
   NN-s.jpg     640 px previews (used when zoomed out, and as list thumbnails)
@@ -326,7 +344,7 @@ Reload any open map page after either one, otherwise its next save writes the ol
 If you add or rescan a sheet in `input/` (named `<number> <name>.jpg`):
 
 ```bash
-cd ~/projects/taxi-maps-skopje-edition
+cd ~/Desktop/projects/ludo-taxi
 for f in input/*.jpg; do
   b=$(basename "$f"); n=$(printf "%02d" ${b%% *})
   cp "$f" sheets/$n.jpg

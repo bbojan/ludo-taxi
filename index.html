@@ -67,7 +67,7 @@
   <div class="card-head">
     <span class="num" id="cardNum"></span>
     <strong id="cardName"></strong>
-    <button class="share" id="cardShare" title="Сподели линк до оваа мапа" aria-label="Сподели линк до оваа мапа">
+    <button class="share" id="cardShare" title="Сподели линк до оваа мапа (S)" aria-label="Сподели линк до оваа мапа">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 10a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>
     </button>
     <button class="close" id="cardClose" aria-label="Затвори">×</button>
@@ -75,7 +75,7 @@
   <div class="row split">
     <button id="cardFocus" class="text" title="Прикажи ја мапата исправена на картата (Enter)">На карта</button>
     <button id="cardFull" class="text primary" title="Цела слика на цел екран (F)">Цел екран</button>
-    <a id="cardDownload" class="btn download-one in-row" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> Преземи</a>
+    <a id="cardDownload" class="btn download-one in-row" title="Преземи го оригиналот (D)" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> Преземи</a>
   </div>
   <div id="editControls" class="hidden">
     <label class="col">Големина <span id="widthVal"></span><input type="range" id="widthRange" min="300" max="5000" step="10"></label>
@@ -96,13 +96,14 @@
     <span class="num" id="viewerNum"></span>
     <strong id="viewerTitle"></strong>
     <button id="viewerFit" class="text" title="Прикажи ја повторно целата слика" disabled>Цела</button>
-    <a id="viewerDownload" class="btn download-one compact" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> <span>Преземи</span></a>
+    <a id="viewerDownload" class="btn download-one compact" title="Преземи го оригиналот (D)" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> <span>Преземи</span></a>
     <button id="viewerClose" class="viewer-close" aria-label="Затвори">×</button>
   </div>
 </div>
 
 <dialog id="aboutDialog" class="about" aria-labelledby="aboutTitle">
   <button class="close" id="aboutClose" aria-label="Затвори">×</button>
+  <div class="about-body">
   <img src="logo.svg" alt="" width="220" height="127">
   <h2 id="aboutTitle">Лудо Такси</h2>
   <p class="sub">мапи на Скопје нацртани на рака<br>прилично одамна</p>
@@ -126,6 +127,52 @@
       <img src="projects/staro-skopje.jpg" alt="" width="160" height="100" loading="lazy">
       <span>Старо Скопје</span></a>
   </nav>
+  <details class="help">
+    <summary>Контроли</summary>
+    <h4>Тастатура</h4>
+    <dl>
+      <dt>Помести ја картата</dt><dd><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></dd>
+      <dt>Зумирај / одзумирај</dt><dd><kbd>+</kbd> <kbd>−</kbd></dd>
+      <dt>Ротирај</dt><dd><kbd>Q</kbd> <kbd>E</kbd> или <kbd>[</kbd> <kbd>]</kbd></dd>
+      <dt>Север горе</dt><dd><kbd>N</kbd></dd>
+      <dt>Почетен приказ</dt><dd><kbd>R</kbd> или <kbd>0</kbd></dd>
+      <dt>Листа на мапи</dt><dd><kbd>L</kbd></dd>
+      <dt>Поставки за приказ</dt><dd><kbd>V</kbd></dd>
+      <dt>Следна / претходна мапа</dt><dd><kbd>.</kbd> <kbd>,</kbd> или <kbd>PgDn</kbd> <kbd>PgUp</kbd></dd>
+      <dt>Избери мапа 1, па „На карта“ / „Назад“</dt><dd><kbd>Enter</kbd> или <kbd>Space</kbd></dd>
+      <dt>Цел екран</dt><dd><kbd>F</kbd></dd>
+      <dt>Преземи ја избраната мапа</dt><dd><kbd>D</kbd></dd>
+      <dt>Сподели / копирај линк</dt><dd><kbd>S</kbd></dd>
+      <dt>Овие контроли</dt><dd><kbd>?</kbd></dd>
+      <dt>Избери од листата</dt><dd><kbd>Tab</kbd>, па <kbd>Enter</kbd></dd>
+      <dt>Назад, па затвори</dt><dd><kbd>Esc</kbd></dd>
+      <dt>Затвори го овој прозорец</dt><dd><kbd>Esc</kbd></dd>
+    </dl>
+    <p class="note">На цел екран: стрелките ја поместуваат сликата, <kbd>+</kbd> <kbd>−</kbd> зумираат,
+      <kbd>R</kbd> или <kbd>0</kbd> ја враќаат целата слика, <kbd>.</kbd> <kbd>,</kbd> следна / претходна, <kbd>D</kbd> преземи,
+      <kbd>S</kbd> сподели, <kbd>F</kbd> или <kbd>Esc</kbd> затвораат. Буквите работат и на македонска тастатура.</p>
+    <h4>Глувче и трекпед</h4>
+    <dl>
+      <dt>Помести ја картата</dt><dd>Влечи</dd>
+      <dt>Зумирај</dt><dd>Тркалце или два прста на трекпедот; штипни на трекпедот</dd>
+      <dt>Зумирај во точка</dt><dd>Двоен клик на празно</dd>
+      <dt>Ротирај</dt><dd>Shift + влечи, влечи со десен клик, Shift + тркалце</dd>
+      <dt>Избери мапа</dt><dd>Клик на мапата или на ознаката</dd>
+      <dt>„На карта“ / „Назад“</dt><dd>Двоен клик на мапата</dd>
+      <dt>Следна / претходна мапа</dt><dd>Скролај настрана (десно = следна)</dd>
+      <dt>Затвори ја картичката</dt><dd>Клик на празно</dd>
+    </dl>
+    <h4>Допир</h4>
+    <dl>
+      <dt>Помести ја картата</dt><dd>Влечи со еден прст</dd>
+      <dt>Зумирај</dt><dd>Рашири или собери два прста; двоен допир</dd>
+      <dt>Ротирај</dt><dd>Заврти со два прста</dd>
+      <dt>Избери мапа</dt><dd>Допри ја мапата или ознаката</dd>
+      <dt>Следна / претходна мапа</dt><dd>Повлечи настрана со три прста (лево = следна)</dd>
+      <dt>Затвори ја картичката</dt><dd>Допри празно</dd>
+    </dl>
+  </details>
+  </div>
 </dialog>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
